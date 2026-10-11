@@ -1,6 +1,6 @@
 import { RwError, type RwBook } from '../api/readwise'
 
-export interface Snapshot {
+interface Snapshot {
 	books: RwBook[]
 	/** Epoch ms of the last successful fetch; 0 if never. */
 	fetchedAt: number
@@ -59,3 +59,9 @@ export function createStore({ fetch, now = () => Date.now(), sleep = (ms) => new
 }
 
 export type Store = ReturnType<typeof createStore>
+
+/** Wraps `fn` so concurrent calls share one promise. */
+export function shareInFlight<T>(fn: () => Promise<T>): () => Promise<T> {
+	let running: Promise<T> | undefined
+	return () => (running ??= fn().finally(() => (running = undefined)))
+}

@@ -1,24 +1,71 @@
-import type { RwBook, RwHighlight } from '../api/readwise'
+import { RwError, type RwBook, type RwHighlight } from '../api/readwise'
 import type { BlockParams } from '../block/params'
+import type { Predicate } from '../filter/evaluate'
 
 export interface Row {
 	book: RwBook
 	h: RwHighlight
 }
 
-const time = (h: RwHighlight) => Date.parse(h.highlighted_at ?? '') || 0
-
-/** Flattens, sorts and truncates per the block params. Only highlight sorts exist so far. */
-export function selectRows(books: RwBook[], p: Pick<BlockParams, 'sort' | 'limit'>): Row[] {
-	const desc = p.sort.startsWith('-')
-	const key = p.sort.replace(/^-/, '')
-	const val = (r: Row) => (key === 'updated' ? Date.parse(r.h.updated_at ?? '') || 0 : time(r.h))
-	const rows = books.flatMap((book) => book.highlights.filter((h) => !h.is_deleted).map((h) => ({ book, h })))
-	rows.sort((a, b) => (desc ? val(b) - val(a) : val(a) - val(b)))
-	return rows.slice(0, p.limit)
+/** A book with the highlights that matched the filter (all of them without one). */
+export interface BookRow {
+	book: RwBook
+	matches: RwHighlight[]
 }
 
-/** Milestone 1 renders only the unfiltered highlights list; anything else must say so rather than show a wrong list. */
-export function isSupported(p: Pick<BlockParams, 'view' | 'search' | 'format'>): boolean {
-	return p.view === 'highlights' && !p.search && p.format === 'list'
+type Order = Pick<BlockParams, 'sort' | 'limit'>
+
+const ms = (iso?: string | null) => Date.parse(iso ?? '') || 0
+const latest = (hs: RwHighlight[], pick: (h: RwHighlight) => string | null | undefined) => Math.max(0, ...hs.map((h) => ms(pick(h))))
+
+const ROW_KEYS: Record<string, (r: Row) => string | number> = {
+	highlighted_at: (r) => ms(r.h.highlighted_at),
+	updated: (r) => ms(r.h.updated_at),
+	title: (r) => r.book.title.toLowerCase(),
+	author: (r) => (r.book.author ?? '').toLowerCase(),
+}
+
+const BOOK_KEYS: Record<string, (r: BookRow) => string | number> = {
+	highlighted_at: (r) => latest(r.matches, (h) => h.highlighted_at),
+	updated: (r) => latest(r.matches, (h) => h.updated_at),
+	title: (r) => r.book.title.toLowerCase(),
+	author: (r) => (r.book.author ?? '').toLowerCase(),
+	num_highlights: (r) => r.matches.length,
+}
+
+function sortLimit<T>(items: T[], { sort, limit }: Order, keys: Record<string, (t: T) => string | number>): T[] {
+	const key = keys[sort.replace(/^-/, '')] ?? keys.highlighted_at
+	const dir = sort.startsWith('-') ? -1 : 1
+	return [...items].sort((a, b) => dir * (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)).slice(0, limit)
+}
+
+export const highlightRows = (books: RwBook[]): Row[] => books.flatMap((book) => book.highlights.filter((h) => !h.is_deleted).map((h) => ({ book, h })))
+
+/** Filters, sorts and truncates highlight rows. */
+export function selectRows(rows: Row[], p: Order, test?: Predicate): Row[] {
+	return sortLimit(test ? rows.filter(test) : rows, p, ROW_KEYS)
+}
+
+/** Books for the books view: with a filter, only those with at least one matching highlight. */
+export function selectBooks(books: RwBook[], p: Order, test?: Predicate): BookRow[] {
+	const all = books.map((book) => ({ book, matches: book.highlights.filter((h) => !h.is_deleted && (!test || test({ book, h }))) }))
+	return sortLimit(test ? all.filter((r) => r.matches.length) : all, p, BOOK_KEYS)
+}
+
+/** Table and quote formats and grouping come in a later release; saying so beats showing a wrong list. */
+export function isSupported(p: Pick<BlockParams, 'format' | 'group'>): boolean {
+	return p.format === 'list' && !p.group
+}
+
+/** What an empty result says, echoing the filter so a wrong one is easy to spot. */
+export function emptyText(view: BlockParams['view'], search: string): string {
+	if (view === 'review') return 'No review available.'
+	const filter = search ? ` Filter: ${search}` : ''
+	return `${view === 'books' ? 'No books match.' : 'No highlights match.'}${filter}`
+}
+
+/** Status line for a failed load; a missing daily review is an empty result, not a failure. */
+export function describeFailure(e: unknown): { status: string; clear: boolean } {
+	if (e instanceof RwError && e.kind === 'not-found') return { status: 'No review available.', clear: true }
+	return { status: e instanceof Error ? e.message : String(e), clear: false }
 }

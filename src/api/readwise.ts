@@ -27,7 +27,20 @@ export interface RwBook {
 	highlights: RwHighlight[]
 }
 
-export type RwErrorKind = 'no-token' | 'auth' | 'rate-limit' | 'server'
+interface RwReviewHighlight {
+	id: number
+	text: string
+	title?: string
+	author?: string
+	category?: string
+	source_type?: string
+	note?: string
+	highlighted_at?: string
+	highlight_url?: string
+	book_id?: number
+}
+
+export type RwErrorKind = 'no-token' | 'auth' | 'not-found' | 'rate-limit' | 'server'
 
 export class RwError extends Error {
 	constructor(
@@ -46,6 +59,7 @@ export function createReadwiseClient(http: HttpPort, getToken: () => string | nu
 		if (!token) throw new RwError('no-token', 'Readwise token is not set (Settings → Readwise embeds).')
 		const res = await http.request({ method: 'GET', url: BASE + path, headers: { Authorization: `Token ${token}` } })
 		if (res.status === 401 || res.status === 403) throw new RwError('auth', 'Readwise rejected the token.')
+		if (res.status === 404) throw new RwError('not-found', 'Not found.')
 		if (res.status === 429) throw new RwError('rate-limit', 'Readwise rate limit reached.', res.retryAfter)
 		if (res.status < 200 || res.status >= 300) throw new RwError('server', `Readwise GET ${path} failed (${res.status}).`)
 		return res.json
@@ -65,6 +79,15 @@ export function createReadwiseClient(http: HttpPort, getToken: () => string | nu
 				cursor = r.nextPageCursor
 			} while (cursor)
 			return out
+		},
+
+		/** The latest daily review as rows. Throws `not-found` when there is none today. Field names are unverified against live data (plan section 13). */
+		async review(): Promise<{ book: RwBook; h: RwHighlight }[]> {
+			const r = (await call('/review/')) as { highlights?: RwReviewHighlight[] }
+			return (r.highlights ?? []).map((x) => ({
+				book: { user_book_id: x.book_id ?? 0, title: x.title ?? '', author: x.author, category: x.category, source: x.source_type, readwise_url: x.highlight_url, highlights: [] },
+				h: { id: x.id, text: x.text, note: x.note, highlighted_at: x.highlighted_at, readwise_url: x.highlight_url },
+			}))
 		},
 
 		/** Resolves if the token is valid. */

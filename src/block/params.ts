@@ -39,6 +39,9 @@ const limit: Check = (value) => {
 	return Number.isInteger(n) && n >= 1 && n <= 500 ? { value: n } : { error: 'limit must be a whole number from 1 to 500.' }
 }
 
+const SORT = /^-?(highlighted_at|updated|title|author|num_highlights)$/
+const sort: Check = (value) => (SORT.test(value) ? { value } : { error: 'sort must be highlighted_at, updated, title, author or num_highlights, optionally prefixed with -.' })
+
 /** Per-key validators; keys without one (search, sort) accept any text. */
 const CHECKS: Record<string, Check> = {
 	view: oneOf('view', ['highlights', 'books', 'review']),
@@ -48,6 +51,7 @@ const CHECKS: Record<string, Check> = {
 	showTags: bool('showTags'),
 	showSource: bool('showSource'),
 	limit,
+	sort,
 }
 
 /** Parses `key: value` lines. Splits on the first `:` so a value like `search: tag:x` stays whole. Problems become warnings; a bad value keeps the default. */
