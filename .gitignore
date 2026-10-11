@@ -26,3 +26,6 @@ data.json
 
 # readwise document list cache
 readwise-cache.json
+
+# saved library (highlight text)
+cache.json

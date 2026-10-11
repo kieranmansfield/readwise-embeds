@@ -48,3 +48,7 @@
 .rw-skeleton-row { height: 3em; margin: var(--size-4-2) 0; border-radius: var(--radius-m); background: var(--background-modifier-hover); animation: rw-pulse 1.4s ease-in-out infinite; }
 @keyframes rw-pulse { 50% { opacity: 0.5; } }
 @media (prefers-reduced-motion: reduce) { .rw-skeleton-row { animation: none; } }
+
+/* Narrow screens: wide tables scroll instead of overflowing the note */
+.rw-table-wrap { overflow-x: auto; }
+.rw-refresh:focus-visible { box-shadow: 0 0 0 2px var(--background-modifier-border-focus); }

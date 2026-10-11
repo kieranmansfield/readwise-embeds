@@ -25,6 +25,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Tag must match manifest version
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: test "${TAG_NAME#v}" = "$(node -p "require('./manifest.json').version")"
+
+      - run: pnpm exec eslint src
+      - run: pnpm test
       - run: pnpm build
 
       - name: Create GitHub Release

@@ -53,3 +53,26 @@ describe('createStore', () => {
 		expect(store.peek()).toEqual({ books: [], fetchedAt: 0 })
 	})
 })
+
+describe('createStore persistence', () => {
+	const saved = { fetchedAt: 5000, books: [book(1, [1])] }
+
+	it('starts from the saved library, skips fetching while fresh, and updates incrementally when stale', async () => {
+		const fetch = vi.fn().mockResolvedValue([book(1, [2])])
+		const store = createStore({ fetch, load: () => Promise.resolve(saved), now: () => 6000 })
+		expect((await store.get(10_000)).books).toHaveLength(1)
+		expect(fetch).not.toHaveBeenCalled()
+		const after = await store.get(100)
+		expect(fetch).toHaveBeenCalledWith(new Date(5000).toISOString(), expect.any(Function))
+		expect(after.books[0].highlights.map((h) => h.id)).toEqual([1, 2])
+	})
+
+	it('saves after a fetch and after reset, and survives a failing load', async () => {
+		const save = vi.fn()
+		const store = createStore({ fetch: () => Promise.resolve([book(1, [1])]), load: () => Promise.reject(new Error('corrupt')), save })
+		await store.refresh()
+		expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ books: [expect.anything()] }))
+		store.reset()
+		expect(save).toHaveBeenLastCalledWith({ books: [], fetchedAt: 0 })
+	})
+})

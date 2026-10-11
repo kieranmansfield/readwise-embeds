@@ -8,6 +8,8 @@ export interface ReadwiseEmbedsSettings {
 	defaultLimit: number
 	/** Cover images load from the original sites, not readwise.io, so they are opt-in. */
 	showCovers: boolean
+	/** Keep the downloaded library in the plugin folder so restarts skip the full download. */
+	persistCache: boolean
 }
 
 export const DEFAULT_SETTINGS: ReadwiseEmbedsSettings = {
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS: ReadwiseEmbedsSettings = {
 	defaultFormat: 'list',
 	defaultLimit: 50,
 	showCovers: false,
+	persistCache: true,
 }
 
 export const MIN_REFRESH_MINUTES = 5

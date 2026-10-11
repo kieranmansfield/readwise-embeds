@@ -50,10 +50,18 @@ export class ReadwiseBlock extends MarkdownRenderChild {
 		blocks.add(this)
 		this.register(() => blocks.delete(this))
 		this.register(library.subscribe((e) => this.onEvent(e)))
-		if (this.params.view !== 'review' && library.peek().fetchedAt) this.data = fromBooks(library.peek().books)
 		this.draw()
+		void library.ready().then(() => this.showHeld())
 		void this.refresh(false)
 		this.registerInterval(window.setInterval(() => void this.refresh(), maxAgeMs))
+	}
+
+	/** Shows the library already held (saved from an earlier session, or fetched by another block) while a fetch runs. */
+	private showHeld() {
+		const held = this.deps.library.peek()
+		if (this.data || this.params.view === 'review' || !held.fetchedAt) return
+		this.data = fromBooks(held.books)
+		this.draw()
 	}
 
 	private async fetchData(force: boolean): Promise<Data> {
@@ -105,7 +113,7 @@ export class ReadwiseBlock extends MarkdownRenderChild {
 		const el = this.containerEl
 		el.empty()
 		const bar = el.createDiv('rw-bar')
-		this.statusEl = bar.createSpan({ cls: 'rw-status', text: this.status ?? '' })
+		this.statusEl = bar.createSpan({ cls: 'rw-status', text: this.status ?? '', attr: { role: 'status', 'aria-live': 'polite' } })
 		const refresh = bar.createEl('button', { cls: 'rw-refresh clickable-icon', attr: { 'aria-label': 'Refresh', title: 'Refresh' }, text: '↻' })
 		refresh.onclick = () => void this.refresh()
 		for (const w of [...this.warnings, ...this.layout.notes]) el.createDiv({ cls: 'rw-warning', text: w })
@@ -121,7 +129,7 @@ export class ReadwiseBlock extends MarkdownRenderChild {
 	}
 
 	private drawQueryError({ error, pos }: { error: string; pos: number }) {
-		const box = this.containerEl.createDiv('rw-error')
+		const box = this.containerEl.createDiv({ cls: 'rw-error', attr: { role: 'alert' } })
 		box.createDiv({ text: `Filter error: ${error}` })
 		box.createEl('pre', { text: `${this.params.search}\n${' '.repeat(pos)}^` })
 	}

@@ -1,5 +1,5 @@
 import type { BookRow, Row } from './rows'
-import { bookMeta, day, noteLine, sourceLine, tagChips, type Show } from './dom'
+import { bookMeta, dateEl, noteLine, sourceLine, tagChips, type Show } from './dom'
 
 /** Full-width highlight cards: the text up front, a stripe in the highlight's colour, the source beneath. */
 export function highlightCards(el: HTMLElement, rows: Row[], show: Show) {
@@ -9,7 +9,7 @@ export function highlightCards(el: HTMLElement, rows: Row[], show: Show) {
 		noteLine(card, h, show.showNotes)
 		const foot = card.createDiv('rw-card-foot')
 		sourceLine(foot, book, 'rw-source-inline', show.showSource)
-		foot.createSpan({ cls: 'rw-date', text: day(h.highlighted_at) })
+		dateEl(foot, h.highlighted_at)
 		tagChips(card, h, show.showTags)
 	}
 }

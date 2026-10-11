@@ -6,6 +6,11 @@ export type Show = Pick<BlockParams, 'showNotes' | 'showTags' | 'showSource'>
 export const day = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : '')
 
 /** `on` lets callers pass a `showSource` flag instead of branching. */
+/** A `<time>` element, so assistive tech and readers get the machine date. Nothing without a date. */
+export function dateEl(parent: HTMLElement, iso?: string | null) {
+	if (iso) parent.createEl('time', { cls: 'rw-date', text: day(iso), attr: { datetime: iso } })
+}
+
 export function sourceLine(parent: HTMLElement, book: RwBook, cls = 'rw-source', on = true) {
 	if (!on) return
 	const src = parent.createDiv(cls)

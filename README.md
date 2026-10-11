@@ -73,18 +73,20 @@ In the `books` view a filter keeps books with at least one matching highlight, a
 - Blocks refresh in the background every **Refresh interval** minutes (minimum 5), while the note is open. Each block has a refresh button.
 - Command **Refresh blocks in this note**.
 - Command **Reload the whole library** throws away what is held and downloads everything again; use it if a deleted highlight lingers.
-- The first block in a session downloads your whole library (shown as a count while it runs). After that, only what changed is fetched, and every block filters the same copy, so ten blocks cost one request. The copy is held in memory only, so restarting Obsidian downloads it again.
+- The first block in a session downloads your whole library (shown as a count while it runs). After that, only what changed is fetched, and every block filters the same copy, so ten blocks cost one request. The copy is also saved to `cache.json` in the plugin folder (see below), so restarting Obsidian only fetches what changed.
 - If Readwise rate-limits a request, the block shows a countdown, keeps the old results visible, and retries when told to.
 
 ## Network and privacy
 
 - The only host contacted is `readwise.io`, over HTTPS. The token is sent only in the `Authorization` header. There is no telemetry.
-- Highlight text is held in memory while Obsidian runs and is not written to disk.
+- **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json` in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
 - **Load cover images** is off by default. When on, cards load images directly from the sites they came from (without a referrer), which tells those sites your address.
 
-## Status
+## Install (beta)
 
-Early. The daily review response shape has not been checked against live data. Not yet in the community plugin list; install with [BRAT](https://github.com/TfTHacker/obsidian42-brat) from this repository.
+Not yet in the community plugin list. Install with [BRAT](https://github.com/TfTHacker/obsidian42-brat): add the beta plugin `kieranmansfield/readwise-embeds`, then enable **Readwise embeds**. Works on desktop and mobile; no desktop-only features are used.
+
+Known gap: the daily review response shape has not been checked against live data.
 
 ## Development
 

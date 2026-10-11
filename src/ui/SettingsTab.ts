@@ -81,5 +81,16 @@ export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 					await plugin.saveSettings()
 				})
 			)
+
+		new Setting(containerEl)
+			.setName('Keep a copy of your library on disk')
+			.setDesc('Makes restarts fast. Stores your highlight text in this plugin\'s folder in the vault, so turn it off if you sync or publish that folder.')
+			.addToggle((t) =>
+				t.setValue(plugin.settings.persistCache).onChange(async (v) => {
+					plugin.settings.persistCache = v
+					await plugin.saveSettings()
+					if (!v) await plugin.cache.clear()
+				})
+			)
 	}
 }

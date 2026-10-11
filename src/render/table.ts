@@ -7,9 +7,9 @@ interface Column<T> {
 }
 
 function table<T>(el: HTMLElement, columns: Column<T>[], items: T[]) {
-	const t = el.createEl('table', 'rw-table')
+	const t = el.createDiv('rw-table-wrap').createEl('table', 'rw-table')
 	const head = t.createEl('thead').createEl('tr')
-	for (const c of columns) head.createEl('th', { text: c.header })
+	for (const c of columns) head.createEl('th', { text: c.header, attr: { scope: 'col' } })
 	const body = t.createEl('tbody')
 	for (const item of items) {
 		const tr = body.createEl('tr')

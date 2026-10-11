@@ -3,6 +3,7 @@ import { obsidianHttp } from './api/http'
 import { createReadwiseClient } from './api/readwise'
 import { DEFAULT_PARAMS, parseParams } from './block/params'
 import { createStore, shareInFlight } from './cache/cache'
+import { cacheFile } from './cache/persist'
 import { registerCommands } from './commands/commands'
 import { ReadwiseBlock } from './render/view'
 import { DEFAULT_SETTINGS, type ReadwiseEmbedsSettings } from './settings'
@@ -12,7 +13,12 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 	settings!: ReadwiseEmbedsSettings
 	blocks = new Set<ReadwiseBlock>()
 	client = createReadwiseClient(obsidianHttp, () => this.app.secretStorage.getSecret(this.settings.readwiseTokenSecret))
-	store = createStore({ fetch: (since, onPage) => this.client.exportAll(since, onPage) })
+	cache = cacheFile(this.app, this.manifest.id)
+	store = createStore({
+		fetch: (since, onPage) => this.client.exportAll(since, onPage),
+		load: () => (this.settings.persistCache ? this.cache.load() : Promise.resolve(null)),
+		save: (snap) => (this.settings.persistCache ? this.cache.save(snap) : undefined),
+	})
 	review = shareInFlight(() => this.client.review())
 
 	async onload() {

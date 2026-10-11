@@ -1,5 +1,5 @@
 import type { Row } from './rows'
-import { day, noteLine, sourceLine, tagChips, type Show } from './dom'
+import { dateEl, noteLine, sourceLine, tagChips, type Show } from './dom'
 
 /** Each highlight as a blockquote, its note beneath, and the source in a footer. */
 export function highlightQuotes(el: HTMLElement, rows: Row[], show: Show) {
@@ -9,7 +9,7 @@ export function highlightQuotes(el: HTMLElement, rows: Row[], show: Show) {
 		noteLine(fig, h, show.showNotes)
 		const foot = fig.createEl('figcaption', 'rw-quote-foot')
 		sourceLine(foot, book, 'rw-source-inline', show.showSource)
-		foot.createSpan({ cls: 'rw-date', text: day(h.highlighted_at) })
+		dateEl(foot, h.highlighted_at)
 		tagChips(foot, h, show.showTags)
 	}
 }
