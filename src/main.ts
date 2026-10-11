@@ -6,7 +6,7 @@ import { createStore, shareInFlight } from './cache/cache'
 import { cacheFile } from './cache/persist'
 import { registerCommands } from './commands/commands'
 import { ReadwiseBlock } from './render/view'
-import { DEFAULT_SETTINGS, type ReadwiseEmbedsSettings } from './settings'
+import { DEFAULT_SETTINGS, findReadwiseSecret, type ReadwiseEmbedsSettings } from './settings'
 import { ReadwiseEmbedsSettingTab } from './ui/SettingsTab'
 
 export default class ReadwiseEmbedsPlugin extends Plugin {
@@ -23,6 +23,7 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 
 	async onload() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<ReadwiseEmbedsSettings> | null)
+		await this.adoptExistingSecret()
 		this.addSettingTab(new ReadwiseEmbedsSettingTab(this.app, this))
 		registerCommands(this)
 		this.registerMarkdownCodeBlockProcessor('readwise', (source, el, ctx) => {
@@ -31,6 +32,15 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 			const deps = { library: this.store, review: this.review, maxAgeMs: refreshMinutes * 60_000, covers: showCovers, blocks: this.blocks }
 			ctx.addChild(new ReadwiseBlock(el, deps, params, warnings))
 		})
+	}
+
+	/** With no token chosen, reuse a Readwise secret already in Obsidian's storage (names only are read). */
+	private async adoptExistingSecret() {
+		if (this.settings.readwiseTokenSecret) return
+		const id = findReadwiseSecret(this.app.secretStorage.listSecrets())
+		if (!id) return
+		this.settings.readwiseTokenSecret = id
+		await this.saveSettings()
 	}
 
 	async saveSettings() {

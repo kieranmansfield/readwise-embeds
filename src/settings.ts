@@ -33,3 +33,9 @@ export function validLimit(raw: string): number | null {
 	const n = Number(raw)
 	return Number.isInteger(n) && n >= 1 && n <= 500 ? n : null
 }
+
+/** The one stored secret whose name mentions Readwise, so an existing token is reused; none if there are zero or several. */
+export function findReadwiseSecret(ids: string[]): string | undefined {
+	const matches = ids.filter((id) => id.toLowerCase().includes('readwise'))
+	return matches.length === 1 ? matches[0] : undefined
+}

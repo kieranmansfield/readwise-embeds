@@ -1,10 +1,8 @@
 # Readwise embeds
 
-Live, filtered views of your Readwise highlights, sources and daily review, drawn from a `readwise` code block. Nothing is written to your vault.
+Live, filtered views of your Readwise highlights, sources and daily review, drawn from a `readwise` code block. It never edits your notes.
 
 It is not a sync plugin. The official Readwise plugin copies highlights into notes; this one shows them where you ask, always up to date, from a query.
-
-Design reference: [obsidian-raindrop](https://github.com/mtopping/obsidian-raindrop).
 
 ## Setup
 
@@ -20,7 +18,7 @@ limit: 20
 ```
 ````
 
-The token lives in Obsidian's secret storage, not in the plugin's `data.json`.
+The token lives in Obsidian's secret storage (its keychain), not in the plugin's `data.json`. You can pick a secret you already saved there; if exactly one stored secret has "readwise" in its name, the plugin selects it for you (it reads secret names, never values).
 
 ## Block reference
 
