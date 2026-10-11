@@ -1,0 +1,102 @@
+{
+	"$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+	"ignoreDependencies": [
+		"tslib",
+		"@typescript-eslint/eslint-plugin",
+		"@eslint/js",
+		"typescript-eslint",
+		"obsidian"
+	],
+	"usedClassMembers": [
+		{
+			"extends": "PromptSuggestModal",
+			"members": [
+				"getItems",
+				"getItemText",
+				"onChooseItem",
+				"renderSuggestion",
+				"onOpen",
+				"onClose",
+				"icon",
+				"getSettingDefinitions",
+				"onload",
+				"onunload"
+			]
+		},
+		{
+			"extends": "FuzzySuggestModal",
+			"members": [
+				"getItems",
+				"getItemText",
+				"onChooseItem",
+				"renderSuggestion",
+				"onOpen",
+				"onClose",
+				"icon",
+				"getSettingDefinitions",
+				"onload",
+				"onunload"
+			]
+		},
+		{
+			"extends": "SuggestModal",
+			"members": [
+				"getItems",
+				"getItemText",
+				"onChooseItem",
+				"renderSuggestion",
+				"onOpen",
+				"onClose",
+				"icon",
+				"getSettingDefinitions",
+				"onload",
+				"onunload"
+			]
+		},
+		{
+			"extends": "Modal",
+			"members": [
+				"getItems",
+				"getItemText",
+				"onChooseItem",
+				"renderSuggestion",
+				"onOpen",
+				"onClose",
+				"icon",
+				"getSettingDefinitions",
+				"onload",
+				"onunload"
+			]
+		},
+		{
+			"extends": "PluginSettingTab",
+			"members": [
+				"getItems",
+				"getItemText",
+				"onChooseItem",
+				"renderSuggestion",
+				"onOpen",
+				"onClose",
+				"icon",
+				"getSettingDefinitions",
+				"onload",
+				"onunload"
+			]
+		},
+		{
+			"extends": "Plugin",
+			"members": [
+				"getItems",
+				"getItemText",
+				"onChooseItem",
+				"renderSuggestion",
+				"onOpen",
+				"onClose",
+				"icon",
+				"getSettingDefinitions",
+				"onload",
+				"onunload"
+			]
+		}
+	]
+}
