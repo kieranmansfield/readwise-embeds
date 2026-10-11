@@ -52,10 +52,36 @@ export function selectBooks(books: RwBook[], p: Order, test?: Predicate): BookRo
 	return sortLimit(test ? all.filter((r) => r.matches.length) : all, p, BOOK_KEYS)
 }
 
-/** Table and quote formats and grouping come in a later release; saying so beats showing a wrong list. */
-export function isSupported(p: Pick<BlockParams, 'format' | 'group'>): boolean {
-	return p.format === 'list' && !p.group
+type Format = BlockParams['format']
+type Group = BlockParams['group']
+
+/** The format and grouping that will actually be drawn, plus a note for each request that had to change. */
+export function resolveLayout(p: Pick<BlockParams, 'view' | 'format' | 'group'>): { format: Format; group: Group; notes: string[] } {
+	const notes: string[] = []
+	let { format, group } = p
+	if (p.view === 'books' && format === 'quote') {
+		notes.push('format: quote is for highlights; showing a list.')
+		format = 'list'
+	}
+	if (p.view === 'books' && group === 'book') {
+		notes.push('group: book does not apply to the books view; showing no groups.')
+		group = ''
+	}
+	return { format, group, notes }
 }
+
+/** Splits items into headed groups, in order of first appearance. A missing key means one unheaded group. */
+export function groupBy<T>(items: T[], keyOf?: (t: T) => string): { heading?: string; items: T[] }[] {
+	if (!keyOf) return [{ items }]
+	const groups = new Map<string, T[]>()
+	for (const item of items) groups.set(keyOf(item), [...(groups.get(keyOf(item)) ?? []), item])
+	return [...groups].map(([heading, items]) => ({ heading, items }))
+}
+
+export const rowGroupKey = (group: Group): ((r: Row) => string) | undefined =>
+	group === 'book' ? (r) => r.book.title : group === 'category' ? (r) => r.book.category ?? 'Other' : undefined
+
+export const bookGroupKey = (group: Group): ((r: BookRow) => string) | undefined => (group === 'category' ? (r) => r.book.category ?? 'Other' : undefined)
 
 /** What an empty result says, echoing the filter so a wrong one is easy to spot. */
 export function emptyText(view: BlockParams['view'], search: string): string {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { RwError, type RwBook } from '../api/readwise'
 import { compileQuery } from '../filter/query'
-import { describeFailure, emptyText, highlightRows, isSupported, selectBooks, selectRows } from './rows'
+import { describeFailure, emptyText, bookGroupKey, groupBy, highlightRows, resolveLayout, rowGroupKey, selectBooks, selectRows } from './rows'
 
 const books: RwBook[] = [
 	{ user_book_id: 1, title: 'Alpha', author: 'Zed', highlights: [{ id: 1, text: 'old', highlighted_at: '2024-01-01T00:00:00Z' }, { id: 2, text: 'gone', is_deleted: true }] },
@@ -41,11 +41,19 @@ describe('selectBooks', () => {
 	})
 })
 
-describe('isSupported', () => {
-	it('allows only the list format without grouping', () => {
-		expect(isSupported({ format: 'list', group: '' })).toBe(true)
-		expect(isSupported({ format: 'table', group: '' })).toBe(false)
-		expect(isSupported({ format: 'list', group: 'book' })).toBe(false)
+describe('resolveLayout', () => {
+	it('falls back with a note where a request does not apply to the books view', () => {
+		expect(resolveLayout({ view: 'books', format: 'quote', group: 'book' })).toMatchObject({ format: 'list', group: '', notes: [expect.stringContaining('quote'), expect.stringContaining('group')] })
+		expect(resolveLayout({ view: 'highlights', format: 'quote', group: 'book' })).toEqual({ format: 'quote', group: 'book', notes: [] })
+	})
+})
+
+describe('groupBy', () => {
+	it('keeps first-appearance order and handles no grouping', () => {
+		expect(groupBy(rows, rowGroupKey('book')).map((g) => [g.heading, g.items.length])).toEqual([['Alpha', 1], ['Beta', 2]])
+		expect(groupBy(rows, rowGroupKey('')).map((g) => g.heading)).toEqual([undefined])
+		expect(groupBy(rows, rowGroupKey('category')).map((g) => g.heading)).toEqual(['Other'])
+		expect(groupBy(selectBooks(books, { sort: 'title', limit: 9 }), bookGroupKey('category')).map((g) => g.heading)).toEqual(['Other'])
 	})
 })
 

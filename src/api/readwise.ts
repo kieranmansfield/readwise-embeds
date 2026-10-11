@@ -23,6 +23,7 @@ export interface RwBook {
 	category?: string
 	source?: string
 	readwise_url?: string
+	cover_image_url?: string
 	book_tags?: { name: string }[]
 	highlights: RwHighlight[]
 }
@@ -67,7 +68,7 @@ export function createReadwiseClient(http: HttpPort, getToken: () => string | nu
 
 	return {
 		/** Pages through /export/ (books with highlights nested); `updatedAfter` makes it incremental and also returns deletions. */
-		async exportAll(updatedAfter?: string): Promise<RwBook[]> {
+		async exportAll(updatedAfter?: string, onPage?: (books: number) => void): Promise<RwBook[]> {
 			const out: RwBook[] = []
 			let cursor: string | null = null
 			do {
@@ -76,6 +77,7 @@ export function createReadwiseClient(http: HttpPort, getToken: () => string | nu
 				if (cursor) params.pageCursor = cursor
 				const r = (await call('/export/?' + new URLSearchParams(params).toString())) as { results: RwBook[]; nextPageCursor: string | null }
 				out.push(...r.results)
+				onPage?.(out.length)
 				cursor = r.nextPageCursor
 			} while (cursor)
 			return out

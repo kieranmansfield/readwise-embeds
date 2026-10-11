@@ -22,7 +22,7 @@ describe('createStore', () => {
 		await Promise.all([store.refresh(), store.refresh(), store.get(0)])
 		expect(fetch).toHaveBeenCalledTimes(1)
 		await store.refresh()
-		expect(fetch).toHaveBeenLastCalledWith(new Date(1000).toISOString())
+		expect(fetch).toHaveBeenLastCalledWith(new Date(1000).toISOString(), expect.any(Function))
 	})
 
 	it('waits Retry-After on a 429 and retries once', async () => {
@@ -39,5 +39,17 @@ describe('createStore', () => {
 		await store.refresh()
 		await expect(store.refresh()).rejects.toThrow('boom')
 		expect(store.peek().books).toHaveLength(1)
+	})
+
+	it('reports progress and rate-limit waits, and reset forgets everything', async () => {
+		const fetch = vi.fn().mockImplementationOnce((_since, onPage: (n: number) => void) => (onPage(3), Promise.reject(new RwError('rate-limit', 'slow', 4)))).mockResolvedValue([book(1, [1])])
+		const store = createStore({ fetch, sleep: () => Promise.resolve() })
+		const seen: unknown[] = []
+		const off = store.subscribe((e) => seen.push(e))
+		await store.refresh()
+		off()
+		expect(seen).toEqual([{ type: 'progress', books: 3 }, { type: 'wait', seconds: 4 }])
+		store.reset()
+		expect(store.peek()).toEqual({ books: [], fetchedAt: 0 })
 	})
 })

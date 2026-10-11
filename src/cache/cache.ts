@@ -6,8 +6,10 @@ interface Snapshot {
 	fetchedAt: number
 }
 
+export type StoreEvent = { type: 'wait'; seconds: number } | { type: 'progress'; books: number }
+
 export interface StoreDeps {
-	fetch: (updatedAfter?: string) => Promise<RwBook[]>
+	fetch: (updatedAfter?: string, onPage?: (books: number) => void) => Promise<RwBook[]>
 	now?: () => number
 	sleep?: (ms: number) => Promise<void>
 }
@@ -31,17 +33,20 @@ export function mergeBooks(books: RwBook[], fresh: RwBook[]): RwBook[] {
 export function createStore({ fetch, now = () => Date.now(), sleep = (ms) => new Promise((r) => window.setTimeout(r, ms)) }: StoreDeps) {
 	let snap: Snapshot = { books: [], fetchedAt: 0 }
 	let running: Promise<Snapshot> | undefined
+	const listeners = new Set<(e: StoreEvent) => void>()
+	const emit = (e: StoreEvent) => listeners.forEach((l) => l(e))
 
 	async function pull(): Promise<Snapshot> {
 		const startedAt = now()
 		const since = snap.fetchedAt ? new Date(snap.fetchedAt).toISOString() : undefined
 		let fresh: RwBook[]
 		try {
-			fresh = await fetch(since)
+			fresh = await fetch(since, (books) => emit({ type: 'progress', books }))
 		} catch (e) {
 			if (!(e instanceof RwError) || e.kind !== 'rate-limit') throw e
+			emit({ type: 'wait', seconds: e.retryAfter })
 			await sleep(e.retryAfter * 1000)
-			fresh = await fetch(since)
+			fresh = await fetch(since, (books) => emit({ type: 'progress', books }))
 		}
 		return (snap = { books: since ? mergeBooks(snap.books, fresh) : mergeBooks([], fresh), fetchedAt: startedAt })
 	}
@@ -51,6 +56,15 @@ export function createStore({ fetch, now = () => Date.now(), sleep = (ms) => new
 	return {
 		/** The data held right now, possibly empty or stale. */
 		peek: () => snap,
+		/** Progress and rate-limit waits of the fetch in flight. Returns the unsubscribe function. */
+		subscribe(listener: (e: StoreEvent) => void): () => void {
+			listeners.add(listener)
+			return () => void listeners.delete(listener)
+		},
+		/** Forgets everything held, so the next refresh downloads the whole library again. */
+		reset() {
+			snap = { books: [], fetchedAt: 0 }
+		},
 		/** Fetches (or joins the fetch in flight). On failure the held data stays. */
 		refresh,
 		/** Held data if younger than `maxAgeMs`, else a refresh. */

@@ -1,24 +1,29 @@
 import { Plugin } from 'obsidian'
 import { obsidianHttp } from './api/http'
 import { createReadwiseClient } from './api/readwise'
-import { parseParams } from './block/params'
+import { DEFAULT_PARAMS, parseParams } from './block/params'
 import { createStore, shareInFlight } from './cache/cache'
+import { registerCommands } from './commands/commands'
 import { ReadwiseBlock } from './render/view'
 import { DEFAULT_SETTINGS, type ReadwiseEmbedsSettings } from './settings'
 import { ReadwiseEmbedsSettingTab } from './ui/SettingsTab'
 
 export default class ReadwiseEmbedsPlugin extends Plugin {
 	settings!: ReadwiseEmbedsSettings
+	blocks = new Set<ReadwiseBlock>()
 	client = createReadwiseClient(obsidianHttp, () => this.app.secretStorage.getSecret(this.settings.readwiseTokenSecret))
-	store = createStore({ fetch: (since) => this.client.exportAll(since) })
+	store = createStore({ fetch: (since, onPage) => this.client.exportAll(since, onPage) })
 	review = shareInFlight(() => this.client.review())
 
 	async onload() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<ReadwiseEmbedsSettings> | null)
 		this.addSettingTab(new ReadwiseEmbedsSettingTab(this.app, this))
+		registerCommands(this)
 		this.registerMarkdownCodeBlockProcessor('readwise', (source, el, ctx) => {
-			const { params, warnings } = parseParams(source)
-			ctx.addChild(new ReadwiseBlock(el, { library: this.store, review: this.review, maxAgeMs: this.settings.refreshMinutes * 60_000 }, params, warnings))
+			const { refreshMinutes, defaultFormat, defaultLimit, showCovers } = this.settings
+			const { params, warnings } = parseParams(source, { ...DEFAULT_PARAMS, format: defaultFormat, limit: defaultLimit })
+			const deps = { library: this.store, review: this.review, maxAgeMs: refreshMinutes * 60_000, covers: showCovers, blocks: this.blocks }
+			ctx.addChild(new ReadwiseBlock(el, deps, params, warnings))
 		})
 	}
 

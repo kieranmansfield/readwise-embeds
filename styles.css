@@ -1,13 +1,50 @@
 .rw-bar { display: flex; align-items: center; gap: var(--size-4-2); justify-content: flex-end; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.rw-status:empty { display: none; }
+.rw-warning { color: var(--text-warning); }
+.rw-empty { color: var(--text-muted); }
+.rw-error, .rw-error pre { color: var(--text-error); }
+.rw-error pre { margin: var(--size-4-1) 0 0; }
+.rw-group { margin: var(--size-4-4) 0 var(--size-4-2); color: var(--text-muted); }
+
+/* Shared pieces */
+.rw-note { margin-top: var(--size-4-1); color: var(--text-muted); }
+.rw-source, .rw-source-inline { font-size: var(--font-ui-smaller); color: var(--text-faint); }
+.rw-source { margin-top: var(--size-4-1); }
+.rw-meta, .rw-date { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.rw-tags { display: flex; flex-wrap: wrap; gap: var(--size-4-1); margin-top: var(--size-4-1); }
+.rw-tag { padding: 0 var(--size-4-2); border-radius: var(--radius-s); background: var(--background-modifier-hover); font-size: var(--font-ui-smaller); }
+
+/* List */
 .rw-list { list-style: none; padding: 0; margin: 0; }
 .rw-item { padding: var(--size-4-2) 0; border-bottom: 1px solid var(--background-modifier-border); }
 .rw-text { margin: 0; }
-.rw-note { margin-top: var(--size-4-1); color: var(--text-muted); }
-.rw-source { margin-top: var(--size-4-1); font-size: var(--font-ui-smaller); color: var(--text-faint); }
-.rw-tags { display: flex; flex-wrap: wrap; gap: var(--size-4-1); margin-top: var(--size-4-1); }
-.rw-tag { padding: 0 var(--size-4-2); border-radius: var(--radius-s); background: var(--background-modifier-hover); font-size: var(--font-ui-smaller); }
-.rw-warning { color: var(--text-warning); }
-.rw-empty { color: var(--text-muted); }
-.rw-meta { margin-top: var(--size-4-1); font-size: var(--font-ui-smaller); color: var(--text-muted); }
-.rw-error { color: var(--text-error); }
-.rw-error pre { margin: var(--size-4-1) 0 0; color: var(--text-error); }
+
+/* Quote */
+.rw-quote { margin: var(--size-4-4) 0; }
+.rw-quote blockquote { margin: 0; font-size: var(--font-text-size); }
+.rw-quote-foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--size-4-2); margin-top: var(--size-4-1); }
+
+/* Table */
+.rw-table { width: 100%; }
+
+/* Cards */
+.rw-card { display: flex; gap: var(--size-4-3); width: 100%; box-sizing: border-box; margin: var(--size-4-2) 0; padding: var(--size-4-4); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); }
+.rw-card:hover { background: var(--background-secondary); }
+.rw-card-highlight { flex-direction: column; gap: var(--size-4-2); border-left: 4px solid var(--rw-accent, var(--background-modifier-border-hover)); }
+.rw-card-highlight[data-color="yellow"] { --rw-accent: var(--color-yellow); }
+.rw-card-highlight[data-color="blue"] { --rw-accent: var(--color-blue); }
+.rw-card-highlight[data-color="pink"] { --rw-accent: var(--color-pink); }
+.rw-card-highlight[data-color="orange"] { --rw-accent: var(--color-orange); }
+.rw-card-highlight[data-color="green"] { --rw-accent: var(--color-green); }
+.rw-card-highlight[data-color="purple"] { --rw-accent: var(--color-purple); }
+.rw-card-text { font-size: var(--font-text-size); line-height: var(--line-height-normal); }
+.rw-card-foot { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--size-4-2); }
+.rw-card-book { align-items: flex-start; }
+.rw-card-body { display: flex; flex-direction: column; gap: var(--size-4-1); min-width: 0; }
+.rw-card-title { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); }
+.rw-cover { width: 96px; height: 64px; flex: none; object-fit: cover; border-radius: var(--radius-s); }
+
+/* Loading */
+.rw-skeleton-row { height: 3em; margin: var(--size-4-2) 0; border-radius: var(--radius-m); background: var(--background-modifier-hover); animation: rw-pulse 1.4s ease-in-out infinite; }
+@keyframes rw-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .rw-skeleton-row { animation: none; } }

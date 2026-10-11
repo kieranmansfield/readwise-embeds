@@ -2,7 +2,7 @@ export interface BlockParams {
 	view: 'highlights' | 'books' | 'review'
 	search: string
 	sort: string
-	format: 'list' | 'table' | 'quote'
+	format: 'list' | 'table' | 'quote' | 'card'
 	limit: number
 	showNotes: boolean
 	showTags: boolean
@@ -45,7 +45,7 @@ const sort: Check = (value) => (SORT.test(value) ? { value } : { error: 'sort mu
 /** Per-key validators; keys without one (search, sort) accept any text. */
 const CHECKS: Record<string, Check> = {
 	view: oneOf('view', ['highlights', 'books', 'review']),
-	format: oneOf('format', ['list', 'table', 'quote']),
+	format: oneOf('format', ['list', 'table', 'quote', 'card']),
 	group: oneOf('group', ['book', 'category']),
 	showNotes: bool('showNotes'),
 	showTags: bool('showTags'),
