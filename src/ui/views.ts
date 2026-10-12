@@ -3,6 +3,7 @@ import type ReadwiseEmbedsPlugin from '../main'
 import type { EmbedBlock } from '../render/block'
 
 export const LIBRARY_VIEW = 'readwise-embeds-library'
+export const READER_LIBRARY_VIEW = 'readwise-embeds-reader-library'
 export const WEB_VIEW = 'readwise-embeds-reader-web'
 const READER_URL = 'https://read.readwise.io/'
 
@@ -20,6 +21,8 @@ interface Section {
 	/** Reader sections are a preset; the rest are a `readwise` view. */
 	kind: 'reader' | 'readwise'
 }
+
+type Kind = Section['kind']
 
 const SECTIONS: Section[] = [
 	{ id: 'inbox', label: 'Inbox', kind: 'reader' },
@@ -42,37 +45,46 @@ interface LibraryState {
 
 /** The source lines of the block this view shows; the same keys as a code block. */
 // fallow-ignore-next-line complexity
-function sourceOf(s: LibraryState): string {
-	const section = SECTIONS.find((x) => x.id === s.section) ?? SECTIONS[0]
+function sourceOf(s: LibraryState, section: Section): string {
 	const lines = section.kind === 'reader' ? [`preset: ${section.id}`] : [`view: ${section.id}`]
 	if (s.search.trim() && section.id !== 'review') lines.push(`search: ${s.search.replace(/\s+/g, ' ').trim()}`)
-	lines.push(`format: ${s.format}`, 'limit: 200')
+	lines.push(`format: ${s.format}`, 'limit: 200', 'warnings: false')
 	if (s.format === 'card') lines.push(`size: ${s.size}`)
 	return lines.join('\n')
 }
 
-/** A pane for browsing Reader documents, highlights, books and the daily review with the code-block filters. */
+/** A pane for browsing either Reader documents or Readwise highlights, books and the daily review, with the code-block filters. */
 export class LibraryView extends ItemView {
-	private state: LibraryState = { section: 'inbox', search: '', format: 'card', size: 260 }
+	private state: LibraryState
 	private block?: EmbedBlock
 	private body?: HTMLElement
 	private timer?: number
 
 	constructor(
 		leaf: WorkspaceLeaf,
-		private plugin: ReadwiseEmbedsPlugin
+		private plugin: ReadwiseEmbedsPlugin,
+		private kind: Kind
 	) {
 		super(leaf)
+		this.state = { section: this.sections()[0].id, search: '', format: 'card', size: 260 }
+	}
+
+	private sections() {
+		return SECTIONS.filter((s) => s.kind === this.kind)
+	}
+
+	private section() {
+		return this.sections().find((s) => s.id === this.state.section) ?? this.sections()[0]
 	}
 
 	getViewType() {
-		return LIBRARY_VIEW
+		return this.kind === 'reader' ? READER_LIBRARY_VIEW : LIBRARY_VIEW
 	}
 	getDisplayText() {
-		return 'Readwise library'
+		return this.kind === 'reader' ? 'Reader library' : 'Readwise library'
 	}
 	getIcon() {
-		return 'library'
+		return this.kind === 'reader' ? 'inbox' : 'library'
 	}
 
 	// fallow-ignore-next-line unused-class-member
@@ -108,8 +120,8 @@ export class LibraryView extends ItemView {
 
 	private toolbar(bar: HTMLElement) {
 		const tabs = bar.createDiv({ cls: 'rw-lib-tabs', attr: { role: 'tablist' } })
-		for (const s of SECTIONS) {
-			const tab = tabs.createEl('button', { cls: 'rw-lib-tab', text: s.label, attr: { role: 'tab', 'aria-selected': String(s.id === this.state.section) } })
+		for (const s of this.sections()) {
+			const tab = tabs.createEl('button', { cls: 'rw-lib-tab', text: s.label, attr: { role: 'tab', 'aria-selected': String(s.id === this.section().id) } })
 			tab.onclick = () => {
 				this.state.section = s.id
 				this.build()
@@ -152,9 +164,9 @@ export class LibraryView extends ItemView {
 		if (!this.body) return
 		if (this.block) this.removeChild(this.block)
 		this.body.empty()
-		const section = SECTIONS.find((x) => x.id === this.state.section) ?? SECTIONS[0]
+		const section = this.section()
 		const host = this.body.createDiv()
-		const source = sourceOf(this.state)
+		const source = sourceOf(this.state, section)
 		this.block = section.kind === 'reader' ? this.plugin.readerBlock(host, source) : this.plugin.readwiseBlock(host, source)
 		this.addChild(this.block)
 	}
@@ -184,11 +196,10 @@ export class ReaderWebView extends ItemView {
 			const web = root.createEl('webview' as 'div', { cls: 'rw-webview', attr: { src: READER_URL, partition: 'persist:readwise-embeds' } })
 			web.setAttribute('allowpopups', 'true')
 		} else {
+			// A page cannot be embedded here, so a link is all there is.
 			root.createEl('p', { text: 'Reader cannot be shown inside Obsidian on this device.' })
+			root.createEl('a', { cls: 'rw-web-open', href: READER_URL, text: 'Open in your browser', attr: { target: '_blank', rel: 'noopener' } })
 		}
-		const open = root.createEl('a', { cls: 'rw-web-open', href: READER_URL, text: 'Open in your browser' })
-		open.setAttribute('target', '_blank')
-		open.setAttribute('rel', 'noopener')
 		return Promise.resolve()
 	}
 }

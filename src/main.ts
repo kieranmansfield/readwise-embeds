@@ -10,7 +10,7 @@ import { cacheFile, parseCache, parseDocs, serializeCache, serializeDocs } from 
 import { createDocStore } from './cache/docs'
 import { registerCommands } from './commands/commands'
 import type { EmbedBlock } from './render/block'
-import { LIBRARY_VIEW, LibraryView, openView, WEB_VIEW, ReaderWebView } from './ui/views'
+import { LIBRARY_VIEW, LibraryView, openView, READER_LIBRARY_VIEW, WEB_VIEW, ReaderWebView } from './ui/views'
 import { ReaderBlock } from './render/readerView'
 import { ReadwiseBlock } from './render/view'
 import { DEFAULT_SETTINGS, findReadwiseSecret, type ReadwiseEmbedsSettings } from './settings'
@@ -44,9 +44,11 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 		registerCommands(this)
 		this.registerMarkdownCodeBlockProcessor('readwise', (source, el, ctx) => ctx.addChild(this.readwiseBlock(el, source)))
 		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => ctx.addChild(this.readerBlock(el, source)))
-		this.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this))
+		this.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this, 'readwise'))
+		this.registerView(READER_LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this, 'reader'))
 		this.registerView(WEB_VIEW, (leaf) => new ReaderWebView(leaf))
 		this.addRibbonIcon('library', 'Open Readwise library', () => void openView(this.app, LIBRARY_VIEW))
+		this.addRibbonIcon('inbox', 'Open Readwise documents', () => void openView(this.app, READER_LIBRARY_VIEW))
 	}
 
 	/** A `readwise` block for `source` (the lines of a code block); the caller adds it as a child. */

@@ -1,6 +1,6 @@
 import { MarkdownView } from 'obsidian'
 import type ReadwiseEmbedsPlugin from '../main'
-import { LIBRARY_VIEW, openView, WEB_VIEW } from '../ui/views'
+import { LIBRARY_VIEW, openView, READER_LIBRARY_VIEW, WEB_VIEW } from '../ui/views'
 
 export function registerCommands(plugin: ReadwiseEmbedsPlugin) {
 	plugin.addCommand({
@@ -14,6 +14,7 @@ export function registerCommands(plugin: ReadwiseEmbedsPlugin) {
 	})
 
 	plugin.addCommand({ id: 'open-library', name: 'Open Readwise library', callback: () => void openView(plugin.app, LIBRARY_VIEW) })
+	plugin.addCommand({ id: 'open-reader-library', name: 'Open Readwise documents', callback: () => void openView(plugin.app, READER_LIBRARY_VIEW) })
 	plugin.addCommand({ id: 'open-reader-web', name: 'Open Readwise website', callback: () => void openView(plugin.app, WEB_VIEW) })
 
 	plugin.addCommand({

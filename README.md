@@ -119,7 +119,7 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 
 ## Panes
 
-- **Readwise library** (ribbon icon, or the command **Open Readwise library**): a pane for browsing without writing a block. Tabs for Inbox, Later, Shortlist, Archive, Feed, Highlights, Books and Daily review; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
+- **Readwise library** (ribbon icon, or the command **Open Readwise library**) and **Reader library** (**Open Readwise documents**): panes for browsing without writing a block. The Readwise pane has tabs for Highlights, Books and Daily review; the Reader pane has Inbox, Later, Shortlist, Archive and Feed; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
 - **Open Readwise website**: Reader's website (read.readwise.io) in a pane, signed in separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
 
 ## Refreshing
