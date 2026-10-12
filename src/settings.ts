@@ -8,6 +8,8 @@ export interface ReadwiseEmbedsSettings {
 	defaultLimit: number
 	/** Cover images load from the original sites, not readwise.io, so they are opt-in. */
 	showCovers: boolean
+	/** Cap on pages (100 documents each) fetched for one Reader request. */
+	maxPages: number
 	/** Keep the downloaded library in the plugin folder so restarts skip the full download. */
 	persistCache: boolean
 }
@@ -18,6 +20,7 @@ export const DEFAULT_SETTINGS: ReadwiseEmbedsSettings = {
 	defaultFormat: 'list',
 	defaultLimit: 50,
 	showCovers: false,
+	maxPages: 10,
 	persistCache: true,
 }
 
@@ -27,6 +30,11 @@ export const MIN_REFRESH_MINUTES = 5
 export function validRefreshMinutes(raw: string): number | null {
 	const n = Number(raw)
 	return Number.isFinite(n) && n >= MIN_REFRESH_MINUTES ? Math.round(n) : null
+}
+
+export function validMaxPages(raw: string): number | null {
+	const n = Number(raw)
+	return Number.isInteger(n) && n >= 1 && n <= 50 ? n : null
 }
 
 export function validLimit(raw: string): number | null {

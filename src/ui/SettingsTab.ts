@@ -1,6 +1,6 @@
 import { Notice, PluginSettingTab, SecretComponent, Setting, type App } from 'obsidian'
 import type ReadwiseEmbedsPlugin from '../main'
-import { MIN_REFRESH_MINUTES, validLimit, validRefreshMinutes, type ReadwiseEmbedsSettings } from '../settings'
+import { MIN_REFRESH_MINUTES, validLimit, validMaxPages, validRefreshMinutes, type ReadwiseEmbedsSettings } from '../settings'
 
 export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 	constructor(
@@ -48,8 +48,20 @@ export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 			)
 
 		new Setting(containerEl)
+			.setName('Maximum pages per query')
+			.setDesc('Each page is 100 documents and one request; Reader allows 20 requests a minute. Applies to blocks rendered after the change. From 1 to 50.')
+			.addText((t) =>
+				t.setValue(String(plugin.settings.maxPages)).onChange(async (raw) => {
+					const n = validMaxPages(raw)
+					if (n === null) return
+					plugin.settings.maxPages = n
+					await plugin.saveSettings()
+				})
+			)
+
+		new Setting(containerEl)
 			.setName('Default format')
-			.setDesc('Used when a block has no format line.')
+			.setDesc('Used when a block has no format line. Reader blocks show a list in place of quote.')
 			.addDropdown((d) =>
 				d
 					.addOptions({ list: 'List', table: 'Table', quote: 'Quote', card: 'Card' })

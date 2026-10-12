@@ -14,9 +14,10 @@ export function registerCommands(plugin: ReadwiseEmbedsPlugin) {
 
 	plugin.addCommand({
 		id: 'reload-library',
-		name: 'Reload the whole library',
+		name: 'Reload everything from Readwise',
 		callback: () => {
 			plugin.store.reset()
+			plugin.docs.reset()
 			for (const b of plugin.blocks) void b.refresh()
 		},
 	})

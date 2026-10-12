@@ -2,18 +2,19 @@ import { describe, expect, it } from 'vitest'
 import type { RwBook, RwHighlight } from '../api/readwise'
 import { parseDate } from './dates'
 import { blockQuery, compileQuery } from './query'
+import { readwiseSchema } from './fields'
 
 const NOW = new Date(2026, 5, 15).getTime()
 const book: RwBook = { user_book_id: 1, title: 'The Dispossessed', author: 'Ursula K. Le Guin', category: 'books', source: 'kindle', book_tags: [{ name: 'scifi' }], highlights: [] }
 const hl = (o: Partial<RwHighlight> = {}): RwHighlight => ({ id: 1, text: 'Anarres had no walls', ...o })
 
 function run(src: string, h: Partial<RwHighlight> = {}) {
-	const q = compileQuery(src, () => NOW)
+	const q = compileQuery(src, readwiseSchema, () => NOW)
 	if ('error' in q) throw new Error(q.error)
 	return q.test({ book, h: hl(h) })
 }
 const err = (src: string) => {
-	const q = compileQuery(src, () => NOW)
+	const q = compileQuery(src, readwiseSchema, () => NOW)
 	return 'error' in q ? q : undefined
 }
 
@@ -93,9 +94,9 @@ describe('parseDate', () => {
 
 describe('blockQuery', () => {
 	it('gives nothing for a blank search, and keeps the error when it fails', () => {
-		expect(blockQuery('')).toEqual({})
-		expect(blockQuery('tag:x').test).toBeTypeOf('function')
-		expect(blockQuery('nope').test).toBeUndefined()
-		expect(blockQuery('nope').query).toHaveProperty('error')
+		expect(blockQuery('', readwiseSchema)).toEqual({})
+		expect(blockQuery('tag:x', readwiseSchema).test).toBeTypeOf('function')
+		expect(blockQuery('nope', readwiseSchema).test).toBeUndefined()
+		expect(blockQuery('nope', readwiseSchema).query).toHaveProperty('error')
 	})
 })

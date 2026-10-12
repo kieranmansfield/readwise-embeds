@@ -24,7 +24,7 @@ const BOOKS: Record<Format, (el: HTMLElement, rows: BookRow[], covers: boolean) 
 }
 
 /** Draws `items` under optional group headings, or `empty` when there are none. */
-function drawGrouped<T>(el: HTMLElement, items: T[], keyOf: ((t: T) => string) | undefined, empty: string, draw: (box: HTMLElement, items: T[]) => void) {
+export function drawGrouped<T>(el: HTMLElement, items: T[], keyOf: ((t: T) => string) | undefined, empty: string, draw: (box: HTMLElement, items: T[]) => void) {
 	if (!items.length) return void el.createDiv({ cls: 'rw-empty', text: empty })
 	for (const g of groupBy(items, keyOf)) {
 		if (g.heading) el.createEl('h4', { cls: 'rw-group', text: g.heading })

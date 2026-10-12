@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { RwError, type RwBook } from '../api/readwise'
+import { RwError } from '../api/errors'
+import type { RwBook } from '../api/readwise'
+import { readwiseSchema } from '../filter/fields'
 import { compileQuery } from '../filter/query'
 import { describeFailure, emptyText, bookGroupKey, groupBy, highlightRows, resolveLayout, rowGroupKey, selectBooks, selectRows } from './rows'
 
@@ -11,7 +13,7 @@ const books: RwBook[] = [
 const rows = highlightRows(books)
 const text = (r: { h: { text: string } }[]) => r.map((x) => x.h.text)
 const test = (src: string) => {
-	const q = compileQuery(src)
+	const q = compileQuery(src, readwiseSchema)
 	if ('error' in q) throw new Error(q.error)
 	return q.test
 }

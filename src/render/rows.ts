@@ -1,5 +1,7 @@
-import { RwError, type RwBook, type RwHighlight } from '../api/readwise'
+import { RwError } from '../api/errors'
+import type { RwBook, RwHighlight } from '../api/readwise'
 import type { BlockParams } from '../block/params'
+import type { Ctx } from '../filter/fields'
 import type { Predicate } from '../filter/evaluate'
 
 export interface Row {
@@ -33,7 +35,7 @@ const BOOK_KEYS: Record<string, (r: BookRow) => string | number> = {
 	num_highlights: (r) => r.matches.length,
 }
 
-function sortLimit<T>(items: T[], { sort, limit }: Order, keys: Record<string, (t: T) => string | number>): T[] {
+export function sortLimit<T>(items: T[], { sort, limit }: Order, keys: Record<string, (t: T) => string | number>): T[] {
 	const key = keys[sort.replace(/^-/, '')] ?? keys.highlighted_at
 	const dir = sort.startsWith('-') ? -1 : 1
 	return [...items].sort((a, b) => dir * (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0)).slice(0, limit)
@@ -42,12 +44,12 @@ function sortLimit<T>(items: T[], { sort, limit }: Order, keys: Record<string, (
 export const highlightRows = (books: RwBook[]): Row[] => books.flatMap((book) => book.highlights.filter((h) => !h.is_deleted).map((h) => ({ book, h })))
 
 /** Filters, sorts and truncates highlight rows. */
-export function selectRows(rows: Row[], p: Order, test?: Predicate): Row[] {
+export function selectRows(rows: Row[], p: Order, test?: Predicate<Ctx>): Row[] {
 	return sortLimit(test ? rows.filter(test) : rows, p, ROW_KEYS)
 }
 
 /** Books for the books view: with a filter, only those with at least one matching highlight. */
-export function selectBooks(books: RwBook[], p: Order, test?: Predicate): BookRow[] {
+export function selectBooks(books: RwBook[], p: Order, test?: Predicate<Ctx>): BookRow[] {
 	const all = books.map((book) => ({ book, matches: book.highlights.filter((h) => !h.is_deleted && (!test || test({ book, h }))) }))
 	return sortLimit(test ? all.filter((r) => r.matches.length) : all, p, BOOK_KEYS)
 }

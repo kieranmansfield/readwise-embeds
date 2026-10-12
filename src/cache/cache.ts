@@ -1,4 +1,5 @@
-import { RwError, type RwBook } from '../api/readwise'
+import type { RwBook } from '../api/readwise'
+import { withRateLimitRetry, type StoreEvent } from './retry'
 
 export interface Snapshot {
 	books: RwBook[]
@@ -6,10 +7,8 @@ export interface Snapshot {
 	fetchedAt: number
 }
 
-export type StoreEvent = { type: 'wait'; seconds: number } | { type: 'progress'; books: number }
-
 export interface StoreDeps {
-	fetch: (updatedAfter?: string, onPage?: (books: number) => void) => Promise<RwBook[]>
+	fetch: (updatedAfter?: string, onPage?: (count: number) => void) => Promise<RwBook[]>
 	/** Previously saved library, to start from; null or a rejection means start empty. */
 	load?: () => Promise<Snapshot | null>
 	/** Called after every successful fetch, and on reset. Not awaited. */
@@ -51,15 +50,7 @@ export function createStore({ fetch, load, save, now = () => Date.now(), sleep =
 		await ready()
 		const startedAt = now()
 		const since = snap.fetchedAt ? new Date(snap.fetchedAt).toISOString() : undefined
-		let fresh: RwBook[]
-		try {
-			fresh = await fetch(since, (books) => emit({ type: 'progress', books }))
-		} catch (e) {
-			if (!(e instanceof RwError) || e.kind !== 'rate-limit') throw e
-			emit({ type: 'wait', seconds: e.retryAfter })
-			await sleep(e.retryAfter * 1000)
-			fresh = await fetch(since, (books) => emit({ type: 'progress', books }))
-		}
+		const fresh = await withRateLimitRetry((onPage) => fetch(since, onPage), emit, sleep)
 		snap = { books: since ? mergeBooks(snap.books, fresh) : mergeBooks([], fresh), fetchedAt: startedAt }
 		save?.(snap)
 		return snap

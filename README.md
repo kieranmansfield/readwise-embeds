@@ -1,6 +1,6 @@
 # Readwise embeds
 
-Live, filtered views of your Readwise highlights, sources and daily review, drawn from a `readwise` code block. It never edits your notes.
+Live, filtered views of your Readwise highlights, sources and daily review (a `readwise` code block), and of your Readwise Reader documents (a `reader` code block). It never edits your notes.
 
 It is not a sync plugin. The official Readwise plugin copies highlights into notes; this one shows them where you ask, always up to date, from a query.
 
@@ -66,17 +66,59 @@ A mistake shows an error under the block with the position and, for a misspelt f
 
 In the `books` view a filter keeps books with at least one matching highlight, and the count shows only the matches.
 
+## Reader documents
+
+A `reader` block lists documents from Reader (inbox, later, shortlist, archive), whether or not they have highlights. It uses the same token.
+
+````text
+```reader
+search: in:later tag:css AND saved__after:"2 weeks ago"
+sort: -saved_at
+format: card
+limit: 25
+```
+````
+
+| Key | Default | Values |
+| --- | --- | --- |
+| `search` | none (every document in your library, feed excluded) | Reader-style filter (below) |
+| `sort` | `-saved_at` | `saved_at`, `updated_at`, `published_date`, `title`, `author`, `word_count`, `reading_progress`; a `-` prefix means descending |
+| `format` | setting (`list`) | `list`, `table`, `card` |
+| `columns` | `title, author, site, saved` | Table only: `title`, `author`, `site`, `category`, `location`, `words`, `time`, `progress`, `saved`, `published`, `tags` |
+| `limit` | setting (`50`) | 1–500 |
+| `showTags` | `true` | `true`, `false` |
+| `showSummary` | `false` | `true`, `false` |
+| `group` | none | `location`, `category`, `site` |
+
+The grammar is the same as for highlights (`AND`, `OR`, `NOT`, parentheses, quotes, `__not`, relative dates). Fields:
+
+| Field | Matches | Operators |
+| --- | --- | --- |
+| `in`, `location` | `new` (also `inbox`), `later`, `shortlist`, `archive`, `feed` | string |
+| `category`, `type` | `article`, `email`, `rss`, `pdf`, `epub`, `tweet`, `video`, … | string |
+| `tag`, `title`, `author`, `url`, `domain`, `saved_using` | text | `:` (contains), `__exact`, `__contains`, `__not` |
+| `saved`, `published`, `last_opened`, `last_status` | dates | `__before`, `__after` |
+| `words`, `minutes`, `progress` | numbers (`progress` is a percentage) | `:`, `__gt`, `__gte`, `__lt`, `__lte`, `__not` |
+| `seen`, `unseen`, `feed` | `true` or `false` | `:`, `__not` |
+| `has` | `has:notes`, `has:tags` | `:`, `__not` |
+
+`shared`, `saved_count`, `rss_source` and anything that needs a document's highlights (`has:highlights`) are not available from the API or not built yet; using them shows an error instead of being ignored.
+
+How it fetches: the parts of your filter that are certain to match (`in:`, `category:`) are sent to Reader, and the whole filter then runs on what comes back, so a pushed term can never hide a correct result. With no `in:`, the inbox, later, shortlist and archive are fetched one by one and the feed is left out (mention `feed` in the filter to include it). Highlight and note entries are hidden unless the filter asks for that category. Reader allows 20 requests a minute across all blocks; requests queue, and blocks that need the same slice share one download. A download stops at **Maximum pages per query** (100 documents a page, default 10); when that cuts a result short, the block says so.
+
+Reader results are held in memory only.
+
 ## Refreshing
 
 - Blocks refresh in the background every **Refresh interval** minutes (minimum 5), while the note is open. Each block has a refresh button.
 - Command **Refresh blocks in this note**.
-- Command **Reload the whole library** throws away what is held and downloads everything again; use it if a deleted highlight lingers.
+- Command **Reload everything from Readwise** throws away what is held (highlights and Reader documents) and downloads again; use it if a deleted highlight lingers.
 - The first block in a session downloads your whole library (shown as a count while it runs). After that, only what changed is fetched, and every block filters the same copy, so ten blocks cost one request. The copy is also saved to `cache.json` in the plugin folder (see below), so restarting Obsidian only fetches what changed.
 - If Readwise rate-limits a request, the block shows a countdown, keeps the old results visible, and retries when told to.
 
 ## Network and privacy
 
-- The only host contacted is `readwise.io`, over HTTPS. The token is sent only in the `Authorization` header. There is no telemetry.
+- The only host contacted is `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The token is sent only in the `Authorization` header. There is no telemetry.
 - **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json` in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
 - **Load cover images** is off by default. When on, cards load images directly from the sites they came from (without a referrer), which tells those sites your address.
 
@@ -84,7 +126,7 @@ In the `books` view a filter keeps books with at least one matching highlight, a
 
 Not yet in the community plugin list. Install with [BRAT](https://github.com/TfTHacker/obsidian42-brat): add the beta plugin `kieranmansfield/readwise-embeds`, then enable **Readwise embeds**. Works on desktop and mobile; no desktop-only features are used.
 
-Known gap: the daily review response shape has not been checked against live data.
+Known gaps: the daily review and Reader response shapes (tags, `reading_time`, published dates) have not been checked against live data, and Reader's filter syntax is only partly documented, so edge cases may differ from Reader itself.
 
 ## Development
 

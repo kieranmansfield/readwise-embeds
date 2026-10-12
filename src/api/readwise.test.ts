@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { HttpPort } from './http'
-import { createReadwiseClient, RwError } from './readwise'
+import type { RwError } from './errors'
+import { createReadwiseClient } from './readwise'
 
 const fake = (...responses: { status: number; json?: unknown; retryAfter?: number }[]) => {
 	const urls: string[] = []

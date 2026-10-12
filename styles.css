@@ -52,3 +52,9 @@
 /* Narrow screens: wide tables scroll instead of overflowing the note */
 .rw-table-wrap { overflow-x: auto; }
 .rw-refresh:focus-visible { box-shadow: 0 0 0 2px var(--background-modifier-border-focus); }
+
+/* Reader documents */
+.rw-doc-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--size-4-2); }
+.rw-original { font-size: var(--font-ui-smaller); }
+.rw-summary { margin-top: var(--size-4-1); color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rw-progress { width: 100%; max-width: 12em; height: var(--size-4-1); margin-top: var(--size-4-1); }

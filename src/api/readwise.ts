@@ -1,4 +1,5 @@
 import type { HttpPort } from './http'
+import { createCaller } from './request'
 
 const BASE = 'https://readwise.io/api/v2'
 
@@ -41,30 +42,8 @@ interface RwReviewHighlight {
 	book_id?: number
 }
 
-export type RwErrorKind = 'no-token' | 'auth' | 'not-found' | 'rate-limit' | 'server'
-
-export class RwError extends Error {
-	constructor(
-		readonly kind: RwErrorKind,
-		message: string,
-		/** Seconds to wait, from `Retry-After`, for `rate-limit`. */
-		readonly retryAfter = 60
-	) {
-		super(message)
-	}
-}
-
 export function createReadwiseClient(http: HttpPort, getToken: () => string | null) {
-	async function call(path: string) {
-		const token = getToken()
-		if (!token) throw new RwError('no-token', 'Readwise token is not set (Settings → Readwise embeds).')
-		const res = await http.request({ method: 'GET', url: BASE + path, headers: { Authorization: `Token ${token}` } })
-		if (res.status === 401 || res.status === 403) throw new RwError('auth', 'Readwise rejected the token.')
-		if (res.status === 404) throw new RwError('not-found', 'Not found.')
-		if (res.status === 429) throw new RwError('rate-limit', 'Readwise rate limit reached.', res.retryAfter)
-		if (res.status < 200 || res.status >= 300) throw new RwError('server', `Readwise GET ${path} failed (${res.status}).`)
-		return res.json
-	}
+	const call = createCaller(http, getToken, BASE)
 
 	return {
 		/** Pages through /export/ (books with highlights nested); `updatedAfter` makes it incremental and also returns deletions. */

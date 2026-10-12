@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { RwError, type RwBook } from '../api/readwise'
+import { RwError } from '../api/errors'
+import type { RwBook } from '../api/readwise'
 import { createStore, mergeBooks } from './cache'
 
 const book = (id: number, ...hl: [number, boolean?][]): RwBook => ({
@@ -48,7 +49,7 @@ describe('createStore', () => {
 		const off = store.subscribe((e) => seen.push(e))
 		await store.refresh()
 		off()
-		expect(seen).toEqual([{ type: 'progress', books: 3 }, { type: 'wait', seconds: 4 }])
+		expect(seen).toEqual([{ type: 'progress', count: 3 }, { type: 'wait', seconds: 4 }])
 		store.reset()
 		expect(store.peek()).toEqual({ books: [], fetchedAt: 0 })
 	})

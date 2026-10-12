@@ -1,4 +1,4 @@
-import { checkTerm, FIELDS, nearestField } from './fields'
+import { checkTerm, nearestField, type Schema } from './schema'
 import { FilterError, tokenize, type Token } from './tokenize'
 
 export type Node =
@@ -13,7 +13,7 @@ const isKeyword = (t: Token | undefined, word?: string) => !!t && t.kind === 'wo
 const isTerm = (t: Token) => t.kind === 'word' && !t.plain && TERM.test(t.text)
 
 /** Parses a filter string into an AST. Throws FilterError with the offending position. */
-export function parseFilter(src: string): Node {
+export function parseFilter<C>(src: string, schema: Schema<C>): Node {
 	const tokens = tokenize(src)
 	let i = 0
 	const peek = () => tokens[i] as Token | undefined
@@ -22,8 +22,8 @@ export function parseFilter(src: string): Node {
 	/** The field named by a term word, or a FilterError naming the nearest known field. */
 	function fieldOf(t: Token, name: string): string {
 		const field = name.toLowerCase()
-		if (field in FIELDS) return field
-		const near = nearestField(field)
+		if (field in schema.fields) return field
+		const near = nearestField(schema, field)
 		throw new FilterError(`Unknown field "${field}"${near ? `. Did you mean "${near}"?` : ''}`, t.pos)
 	}
 
@@ -41,7 +41,7 @@ export function parseFilter(src: string): Node {
 		const v = value(t, m[3])
 		if (!v) throw new FilterError(`Expected a value after "${t.text}"`, t.pos)
 		const op = (m[2] ?? '').toLowerCase()
-		const problem = checkTerm(field, op, v)
+		const problem = checkTerm(schema, field, op, v)
 		if (problem) throw new FilterError(problem, t.pos)
 		return { type: 'term', field, op, value: v }
 	}

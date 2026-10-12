@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RwBook } from './api/readwise'
 import { mergeBooks } from './cache/cache'
+import { readwiseSchema } from './filter/fields'
 import { compileQuery } from './filter/query'
 import { highlightRows, selectBooks, selectRows } from './render/rows'
 
@@ -21,7 +22,7 @@ const big: RwBook[] = Array.from({ length: 2000 }, (_, b) => ({
 
 describe('large library', () => {
 	it('filters, sorts and merges 50,000 highlights well inside a frame budget for a refresh', () => {
-		const q = compileQuery('category:books AND (has:note OR tag:tagged) AND author__not:"Author 3"')
+		const q = compileQuery('category:books AND (has:note OR tag:tagged) AND author__not:"Author 3"', readwiseSchema)
 		if (!('test' in q)) throw new Error('query failed')
 		const t0 = performance.now()
 		const rows = highlightRows(big)

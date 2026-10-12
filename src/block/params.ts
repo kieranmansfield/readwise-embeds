@@ -22,27 +22,53 @@ export const DEFAULT_PARAMS: BlockParams = {
 	group: '',
 }
 
-type Check = (value: string) => { value: unknown } | { error: string }
+export type Check = (value: string) => { value: unknown } | { error: string }
 
-const oneOf =
+export const oneOf =
 	(key: string, options: string[]): Check =>
 	(value) =>
 		options.includes(value) ? { value } : { error: `${key} must be one of: ${options.join(', ')}.` }
 
-const bool =
+export const bool =
 	(key: string): Check =>
 	(value) =>
 		value === 'true' || value === 'false' ? { value: value === 'true' } : { error: `${key} must be true or false.` }
 
-const limit: Check = (value) => {
+export const limit: Check = (value) => {
 	const n = Number(value)
 	return Number.isInteger(n) && n >= 1 && n <= 500 ? { value: n } : { error: 'limit must be a whole number from 1 to 500.' }
 }
 
-const SORT = /^-?(highlighted_at|updated|title|author|num_highlights)$/
-const sort: Check = (value) => (SORT.test(value) ? { value } : { error: 'sort must be highlighted_at, updated, title, author or num_highlights, optionally prefixed with -.' })
+/** `sort` accepts one of `keys`, optionally prefixed with `-` for descending. */
+export const sortOf =
+	(keys: string[]): Check =>
+	(value) =>
+		keys.includes(value.replace(/^-/, '')) ? { value } : { error: `sort must be ${keys.join(', ')}, optionally prefixed with -.` }
 
-/** Per-key validators; keys without one (search, sort) accept any text. */
+/**
+ * Parses `key: value` lines against `defaults` (whose keys are the only valid ones). Splits on the first `:` so a
+ * value like `search: tag:x` stays whole. Problems become warnings; a bad value keeps the default. Keys with no
+ * entry in `checks` accept any text.
+ */
+export function parseWith<T extends object>(source: string, defaults: T, checks: Record<string, Check>): { params: T; warnings: string[] } {
+	const params: Record<string, unknown> = { ...(defaults as Record<string, unknown>) }
+	const warnings: string[] = []
+	for (const line of source.split('\n')) {
+		if (!line.trim()) continue
+		const i = line.indexOf(':')
+		const key = line.slice(0, i).trim()
+		if (i < 0 || !(key in defaults)) {
+			warnings.push(`Unknown key "${i < 0 ? line.trim() : key}".`)
+			continue
+		}
+		const text = line.slice(i + 1).trim()
+		const r = checks[key]?.(text) ?? { value: text }
+		if ('error' in r) warnings.push(r.error)
+		else params[key] = r.value
+	}
+	return { params: params as T, warnings }
+}
+
 const CHECKS: Record<string, Check> = {
 	view: oneOf('view', ['highlights', 'books', 'review']),
 	format: oneOf('format', ['list', 'table', 'quote', 'card']),
@@ -51,25 +77,7 @@ const CHECKS: Record<string, Check> = {
 	showTags: bool('showTags'),
 	showSource: bool('showSource'),
 	limit,
-	sort,
+	sort: sortOf(['highlighted_at', 'updated', 'title', 'author', 'num_highlights']),
 }
 
-/** Parses `key: value` lines. Splits on the first `:` so a value like `search: tag:x` stays whole. Problems become warnings; a bad value keeps the default. */
-export function parseParams(source: string, defaults: BlockParams = DEFAULT_PARAMS): { params: BlockParams; warnings: string[] } {
-	const params: Record<string, unknown> = { ...defaults }
-	const warnings: string[] = []
-	for (const line of source.split('\n')) {
-		if (!line.trim()) continue
-		const i = line.indexOf(':')
-		const key = line.slice(0, i).trim()
-		if (i < 0 || !(key in DEFAULT_PARAMS)) {
-			warnings.push(`Unknown key "${i < 0 ? line.trim() : key}".`)
-			continue
-		}
-		const text = line.slice(i + 1).trim()
-		const r = CHECKS[key]?.(text) ?? { value: text }
-		if ('error' in r) warnings.push(r.error)
-		else params[key] = r.value
-	}
-	return { params: params as unknown as BlockParams, warnings }
-}
+export const parseParams = (source: string, defaults: BlockParams = DEFAULT_PARAMS) => parseWith(source, defaults, CHECKS)
