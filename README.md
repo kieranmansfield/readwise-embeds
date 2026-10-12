@@ -117,6 +117,11 @@ How it fetches: each location (inbox, later, shortlist, archive; the feed only i
 
 The copy is saved to `reader-cache.json` in the plugin folder (same setting and privacy note as below), so restarting Obsidian shows results immediately and syncs only changes.
 
+## Panes
+
+- **Readwise library** (ribbon icon, or the command **Open Readwise library**): a pane for browsing without writing a block. Tabs for Inbox, Later, Shortlist, Archive, Feed, Highlights, Books and Daily review; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
+- **Open Readwise website**: Reader's website (read.readwise.io) in a pane, signed in separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
+
 ## Refreshing
 
 - Blocks refresh in the background every **Refresh interval** minutes (minimum 5), while the note is open. Each block has a refresh button.
@@ -127,7 +132,7 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 
 ## Network and privacy
 
-- The only host contacted is `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The token is sent only in the `Authorization` header. There is no telemetry.
+- The plugin contacts only `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The **Open Readwise Reader** pane loads read.readwise.io, but only when you open it. The token is sent only in the `Authorization` header. There is no telemetry.
 - **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json`, and your Reader documents (titles, authors, tags, notes, summaries) to `reader-cache.json`, in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
 - **Load cover images** is off by default. When on, cards load images directly from the sites they came from (without a referrer), which tells those sites your address.
 

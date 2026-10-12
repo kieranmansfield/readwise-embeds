@@ -10,6 +10,7 @@ import { cacheFile, parseCache, parseDocs, serializeCache, serializeDocs } from 
 import { createDocStore } from './cache/docs'
 import { registerCommands } from './commands/commands'
 import type { EmbedBlock } from './render/block'
+import { LIBRARY_VIEW, LibraryView, openView, WEB_VIEW, ReaderWebView } from './ui/views'
 import { ReaderBlock } from './render/readerView'
 import { ReadwiseBlock } from './render/view'
 import { DEFAULT_SETTINGS, findReadwiseSecret, type ReadwiseEmbedsSettings } from './settings'
@@ -41,18 +42,31 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 		await this.adoptExistingSecret()
 		this.addSettingTab(new ReadwiseEmbedsSettingTab(this.app, this))
 		registerCommands(this)
-		this.registerMarkdownCodeBlockProcessor('readwise', (source, el, ctx) => {
-			const { defaultFormat, defaultLimit, showCovers, linkNotes, noteIdProperty } = this.settings
-			const { params, warnings } = parseParams(source, { ...DEFAULT_PARAMS, format: defaultFormat, limit: defaultLimit })
-			const deps = { library: this.store, review: this.review, covers: showCovers, app: this.app, noteProperty: linkNotes ? noteIdProperty.trim() : '' }
-			ctx.addChild(new ReadwiseBlock(el, this.common(), deps, params, warnings))
-		})
-		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => {
-			const { defaultFormat, defaultLimit, showCovers, linkNotes, noteIdProperty } = this.settings
-			const format = defaultFormat === 'quote' ? 'list' : defaultFormat
-			const { params, warnings } = parseReaderParams(source, { ...DEFAULT_READER_PARAMS, format, limit: defaultLimit })
-			ctx.addChild(new ReaderBlock(el, this.common(), { docs: this.docs, covers: showCovers, app: this.app, noteProperty: linkNotes ? noteIdProperty.trim() : '' }, params, warnings))
-		})
+		this.registerMarkdownCodeBlockProcessor('readwise', (source, el, ctx) => ctx.addChild(this.readwiseBlock(el, source)))
+		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => ctx.addChild(this.readerBlock(el, source)))
+		this.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this))
+		this.registerView(WEB_VIEW, (leaf) => new ReaderWebView(leaf))
+		this.addRibbonIcon('library', 'Open Readwise library', () => void openView(this.app, LIBRARY_VIEW))
+	}
+
+	/** A `readwise` block for `source` (the lines of a code block); the caller adds it as a child. */
+	readwiseBlock(el: HTMLElement, source: string) {
+		const { defaultFormat, defaultLimit, showCovers } = this.settings
+		const { params, warnings } = parseParams(source, { ...DEFAULT_PARAMS, format: defaultFormat, limit: defaultLimit })
+		return new ReadwiseBlock(el, this.common(), { library: this.store, review: this.review, covers: showCovers, ...this.noteLinking() }, params, warnings)
+	}
+
+	/** A `reader` block for `source`; the caller adds it as a child. */
+	readerBlock(el: HTMLElement, source: string) {
+		const { defaultFormat, defaultLimit, showCovers } = this.settings
+		const format = defaultFormat === 'quote' ? 'list' : defaultFormat
+		const { params, warnings } = parseReaderParams(source, { ...DEFAULT_READER_PARAMS, format, limit: defaultLimit })
+		return new ReaderBlock(el, this.common(), { docs: this.docs, covers: showCovers, ...this.noteLinking() }, params, warnings)
+	}
+
+	private noteLinking() {
+		const { linkNotes, noteIdProperty } = this.settings
+		return { app: this.app, noteProperty: linkNotes ? noteIdProperty.trim() : '' }
 	}
 
 	private common() {

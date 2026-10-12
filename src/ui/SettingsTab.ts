@@ -106,7 +106,7 @@ export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Note ID property')
-			.setDesc('The frontmatter property in your Readwise notes that holds the Readwise book ID. The official Readwise plugin uses id.')
+			.setDesc('The frontmatter property in your Readwise notes that holds the Readwise book ID. The default matches the official Readwise plugin.')
 			.addText((t) =>
 				t.setValue(plugin.settings.noteIdProperty).onChange(async (v) => {
 					plugin.settings.noteIdProperty = v.trim() || DEFAULT_SETTINGS.noteIdProperty
