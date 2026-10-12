@@ -42,7 +42,7 @@
 .rw-card-book { align-items: flex-start; }
 .rw-card-body { display: flex; flex-direction: column; gap: var(--size-4-1); min-width: 0; }
 .rw-card-title { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); }
-.rw-cover { width: 96px; height: 64px; flex: none; object-fit: cover; border-radius: var(--radius-s); }
+.rw-cover { width: clamp(96px, 16vw, 200px); height: auto; max-height: clamp(128px, 22vw, 280px); flex: none; align-self: flex-start; object-fit: contain; border-radius: var(--radius-s); }
 
 /* Loading */
 .rw-skeleton-row { height: 3em; margin: var(--size-4-2) 0; border-radius: var(--radius-m); background: var(--background-modifier-hover); animation: rw-pulse 1.4s ease-in-out infinite; }
