@@ -1,6 +1,6 @@
 import { Notice, PluginSettingTab, SecretComponent, Setting, type App } from 'obsidian'
 import type ReadwiseEmbedsPlugin from '../main'
-import { MIN_REFRESH_MINUTES, validLimit, validMaxPages, validRefreshMinutes, type ReadwiseEmbedsSettings } from '../settings'
+import { DEFAULT_SETTINGS, MIN_REFRESH_MINUTES, validLimit, validMaxPages, validRefreshMinutes, type ReadwiseEmbedsSettings } from '../settings'
 
 export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 	constructor(
@@ -90,6 +90,26 @@ export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(plugin.settings.showCovers).onChange(async (v) => {
 					plugin.settings.showCovers = v
+					await plugin.saveSettings()
+				})
+			)
+
+		new Setting(containerEl)
+			.setName('Link to Readwise notes')
+			.setDesc('Add a link after each source in highlight blocks that opens the note for it in your vault. Applies to blocks rendered after the change.')
+			.addToggle((t) =>
+				t.setValue(plugin.settings.linkNotes).onChange(async (v) => {
+					plugin.settings.linkNotes = v
+					await plugin.saveSettings()
+				})
+			)
+
+		new Setting(containerEl)
+			.setName('Note id property')
+			.setDesc('The frontmatter property in your Readwise notes that holds the Readwise book id. The official Readwise plugin uses id.')
+			.addText((t) =>
+				t.setValue(plugin.settings.noteIdProperty).onChange(async (v) => {
+					plugin.settings.noteIdProperty = v.trim() || DEFAULT_SETTINGS.noteIdProperty
 					await plugin.saveSettings()
 				})
 			)

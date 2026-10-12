@@ -41,7 +41,7 @@ export class ReaderBlock extends EmbedBlock {
 		private params: ReaderParams,
 		warnings: string[]
 	) {
-		const search = effectiveSearch(params.preset, params.search)
+		const search = effectiveSearch(params.preset, params.search, params.date)
 		super(el, common, params.warnings ? warnings : [], search)
 		const { query, test, ast } = blockQuery(search, readerSchema)
 		this.test = test

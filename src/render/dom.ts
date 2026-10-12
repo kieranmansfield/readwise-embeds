@@ -13,7 +13,7 @@ export function dateEl(parent: HTMLElement, iso?: string | null) {
 
 export function sourceLine(parent: HTMLElement, book: RwBook, cls = 'rw-source', on = true) {
 	if (!on) return
-	const src = parent.createDiv(cls)
+	const src = parent.createDiv({ cls, attr: { 'data-book-id': String(book.user_book_id) } })
 	const title = book.readwise_url ? src.createEl('a', { href: book.readwise_url, text: book.title }) : src.createSpan({ text: book.title })
 	title.addClass('rw-title')
 	if (book.author) src.createSpan({ text: ` — ${book.author}` })

@@ -18,3 +18,10 @@ describe('parseParams', () => {
 		expect(warnings).toHaveLength(5)
 	})
 })
+
+describe('date key', () => {
+	it('takes a real day only', () => {
+		expect(parseParams('date: 2026-10-12').params.date).toBe('2026-10-12')
+		expect(parseParams('date: 2026-13-01').warnings).toHaveLength(1)
+	})
+})

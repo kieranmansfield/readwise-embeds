@@ -12,6 +12,10 @@ export interface ReadwiseEmbedsSettings {
 	maxPages: number
 	/** Keep the downloaded library in the plugin folder so restarts skip the full download. */
 	persistCache: boolean
+	/** Link each source to the vault note whose frontmatter property below matches its Readwise id. */
+	linkNotes: boolean
+	/** Frontmatter property holding the Readwise book id; the official Readwise plugin writes `id`. */
+	noteIdProperty: string
 }
 
 export const DEFAULT_SETTINGS: ReadwiseEmbedsSettings = {
@@ -22,6 +26,8 @@ export const DEFAULT_SETTINGS: ReadwiseEmbedsSettings = {
 	showCovers: false,
 	maxPages: 10,
 	persistCache: true,
+	linkNotes: true,
+	noteIdProperty: 'id',
 }
 
 export const MIN_REFRESH_MINUTES = 5

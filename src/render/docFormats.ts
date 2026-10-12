@@ -102,5 +102,5 @@ export function drawDocs(el: HTMLElement, docs: RdDoc[], p: ReaderParams, covers
 		if (p.format === 'table') docTable(box, items, p.columns)
 		else if (p.format === 'card') docCards(box, items, p, covers)
 		else docList(box, items, p)
-	})
+	}, p.format === 'card' ? p.size : 0)
 }

@@ -9,6 +9,8 @@ export interface BlockParams {
 	showSource: boolean
 	group: '' | 'book' | 'category'
 	warnings: boolean
+	size: number
+	date: string
 }
 
 export const DEFAULT_PARAMS: BlockParams = {
@@ -22,6 +24,8 @@ export const DEFAULT_PARAMS: BlockParams = {
 	showSource: true,
 	group: '',
 	warnings: true,
+	size: 0,
+	date: '',
 }
 
 export type Check = (value: string) => { value: unknown } | { error: string }
@@ -35,6 +39,19 @@ export const bool =
 	(key: string): Check =>
 	(value) =>
 		value === 'true' || value === 'false' ? { value: value === 'true' } : { error: `${key} must be true or false.` }
+
+/** Card grid column width in px; 0 (the default) keeps full-width cards. */
+export const size: Check = (value) => {
+	const n = Number(value)
+	return Number.isInteger(n) && (n === 0 || (n >= 120 && n <= 800)) ? { value: n } : { error: 'size must be 0 (full-width cards) or a whole number from 120 to 800.' }
+}
+
+/** A real calendar day, `YYYY-MM-DD`, as a daily-note template can fill in. */
+export const date: Check = (value) => {
+	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+	const d = m && new Date(+m[1], +m[2] - 1, +m[3])
+	return d && d.getMonth() === +m![2] - 1 && d.getDate() === +m![3] ? { value } : { error: 'date must be a real day like 2026-10-12.' }
+}
 
 export const limit: Check = (value) => {
 	const n = Number(value)
@@ -79,6 +96,8 @@ const CHECKS: Record<string, Check> = {
 	showTags: bool('showTags'),
 	showSource: bool('showSource'),
 	warnings: bool('warnings'),
+	size,
+	date,
 	limit,
 	sort: sortOf(['highlighted_at', 'updated', 'title', 'author', 'num_highlights']),
 }

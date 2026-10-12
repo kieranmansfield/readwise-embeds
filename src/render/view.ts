@@ -1,3 +1,6 @@
+import type { App } from 'obsidian'
+import { linkNotes } from './noteLinks'
+import { effectiveSearch } from '../block/presets'
 import type { RwBook } from '../api/readwise'
 import type { Store } from '../cache/cache'
 import type { StoreEvent } from '../cache/retry'
@@ -13,6 +16,9 @@ export interface ReadwiseDeps {
 	library: Store
 	review: () => Promise<Row[]>
 	covers: boolean
+	app: App
+	/** Frontmatter property to match notes on; empty turns note links off. */
+	noteProperty: string
 }
 
 interface Data {
@@ -37,8 +43,9 @@ export class ReadwiseBlock extends EmbedBlock {
 		private params: BlockParams,
 		warnings: string[]
 	) {
-		const { query, test } = blockQuery(params.view === 'review' ? '' : params.search, readwiseSchema)
-		super(el, common, noticesOf(params, warnings), params.search)
+		const search = params.view === 'review' ? '' : effectiveSearch('', params.search, params.date, 'highlighted')
+		const { query, test } = blockQuery(search, readwiseSchema)
+		super(el, common, noticesOf(params, warnings), search)
 		this.test = test
 		if (query && 'error' in query) this.queryError = query
 	}
@@ -74,12 +81,14 @@ export class ReadwiseBlock extends EmbedBlock {
 		this.data = fromBooks((await (force ? library.refresh() : library.get(this.maxAgeMs))).books)
 	}
 
+	// fallow-ignore-next-line complexity
 	protected drawContent(el: HTMLElement) {
 		if (!this.data) return
 		const { view, search } = this.params
 		const { format, group } = this.layout
 		const empty = emptyText(view, view === 'review' ? '' : search)
-		if (view === 'books') return drawBookRows(el, selectBooks(this.data.books, this.params, this.test), format, this.deps.covers, bookGroupKey(group), empty)
-		drawHighlightRows(el, selectRows(this.data.rows, this.params, this.test), format, this.params, rowGroupKey(group), empty)
+		if (view === 'books') drawBookRows(el, selectBooks(this.data.books, this.params, this.test), format, this.deps.covers, bookGroupKey(group), empty, this.params.size)
+		else drawHighlightRows(el, selectRows(this.data.rows, this.params, this.test), format, this.params, rowGroupKey(group), empty, this.params.size)
+		if (this.deps.noteProperty) linkNotes(el, this.deps.app, this.deps.noteProperty)
 	}
 }

@@ -33,6 +33,8 @@ One `key: value` line each. Only `search` is commonly needed.
 | `limit` | setting (`50`) | 1–500 |
 | `showNotes`, `showTags`, `showSource` | `true` | `true`, `false` |
 | `group` | none | `book`, `category` (`category` only for the books view) |
+| `date` | none | `YYYY-MM-DD`: only highlights from that day. For daily notes, fill it in from your template (`date: {{date:YYYY-MM-DD}}`). Combines with `search`. Ignored for `review`. |
+| `size` | `0` | Card format only. `0` keeps full-width cards; 120–800 lays cards out in a grid whose columns are at least that many pixels wide, cover on top. |
 | `warnings` | `true` | `false` hides notices under the block (bad keys, layout notes). Filter errors still show. |
 
 ### Formats
@@ -67,6 +69,8 @@ A mistake shows an error under the block with the position and, for a misspelt f
 
 In the `books` view a filter keeps books with at least one matching highlight, and the count shows only the matches.
 
+If a note in your vault has a frontmatter property equal to the book's Readwise id, a **note** link appears after the source and opens that note. The property is `id` by default (what the official Readwise plugin writes); change it, or turn the links off, in **Settings → Readwise embeds**. Hold Ctrl or Cmd to open it in a new tab. Nothing is written to the note.
+
 ## Reader documents
 
 A `reader` block lists documents from Reader (inbox, later, shortlist, archive), whether or not they have highlights. It uses the same token.
@@ -82,7 +86,8 @@ limit: 25
 
 | Key | Default | Values |
 | --- | --- | --- |
-| `preset` | none | `inbox`, `later`, `shortlist`, `archive`, `feed`, `recent` (saved in the last 7 days), `unread`, `long-reads` (20+ minutes). A named filter; `search` narrows it further. |
+| `preset` | none | `inbox`, `later`, `shortlist`, `archive`, `feed`, `recent` (saved in the last 7 days), `unread`, `long-reads` (20+ minutes), `daily` (everything but RSS items; pair it with `date`). A named filter; `search` narrows it further. |
+| `date` | none | `YYYY-MM-DD`: only documents saved that day. For daily notes, fill it in from your template (`date: {{date:YYYY-MM-DD}}` in Templater or core Templates). Combines with `preset` and `search`. |
 | `search` | none (every document in your library, feed excluded) | Reader-style filter (below) |
 | `sort` | `-saved_at` | `saved_at`, `updated_at`, `published_date`, `title`, `author`, `word_count`, `reading_progress`; a `-` prefix means descending |
 | `format` | setting (`list`) | `list`, `table`, `card` |
@@ -91,6 +96,7 @@ limit: 25
 | `showTags` | `true` | `true`, `false` |
 | `showSummary` | `false` | `true`, `false` |
 | `group` | none | `location`, `category`, `site` |
+| `size` | `0` | Card format only. `0` keeps full-width cards; 120–800 lays cards out in a grid whose columns are at least that many pixels wide, cover on top. |
 | `warnings` | `true` | `false` hides notices under the block, including the "first N documents" cut-off notice. Filter errors still show. |
 
 The grammar is the same as for highlights (`AND`, `OR`, `NOT`, parentheses, quotes, `__not`, relative dates). Fields:

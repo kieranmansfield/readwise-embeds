@@ -291,3 +291,15 @@ describe('presets and saved documents', () => {
 		for (const bad of ['', 'nope', '{}', '{"v":2,"locations":{}}', '{"v":1,"locations":[]}']) expect(parseDocs(bad)).toBeNull()
 	})
 })
+
+describe('effectiveSearch with a date', () => {
+	it('bounds saved to that local day and keeps the rest inside parentheses', () => {
+		expect(effectiveSearch('', '', '2026-10-31')).toBe('saved__after:2026-10-31 AND saved__before:2026-11-01')
+		expect(effectiveSearch('daily', 'tag:a OR tag:b', '2026-12-31')).toBe('NOT category:rss AND saved__after:2026-12-31 AND saved__before:2027-01-01 AND (tag:a OR tag:b)')
+		expect(compile(effectiveSearch('daily', '', '2026-10-12')).ast).toBeDefined()
+	})
+})
+
+it('bounds highlights by highlighted date', () => {
+	expect(effectiveSearch('', 'tag:a', '2026-10-12', 'highlighted')).toBe('highlighted__after:2026-10-12 AND highlighted__before:2026-10-13 AND (tag:a)')
+})

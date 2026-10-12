@@ -1,11 +1,12 @@
 import { PRESETS } from './presets'
-import { bool, limit, oneOf, parseWith, sortOf, type Check } from './params'
+import { bool, date, limit, oneOf, size, parseWith, sortOf, type Check } from './params'
 
 const COLUMNS = ['title', 'author', 'site', 'category', 'location', 'words', 'time', 'progress', 'saved', 'published', 'tags'] as const
 export type Column = (typeof COLUMNS)[number]
 
 export interface ReaderParams {
 	preset: string
+	date: string
 	search: string
 	sort: string
 	format: 'list' | 'table' | 'card'
@@ -15,10 +16,12 @@ export interface ReaderParams {
 	showSummary: boolean
 	group: '' | 'location' | 'category' | 'site'
 	warnings: boolean
+	size: number
 }
 
 export const DEFAULT_READER_PARAMS: ReaderParams = {
 	preset: '',
+	date: '',
 	search: '',
 	sort: '-saved_at',
 	format: 'list',
@@ -28,6 +31,7 @@ export const DEFAULT_READER_PARAMS: ReaderParams = {
 	showSummary: false,
 	group: '',
 	warnings: true,
+	size: 0,
 }
 
 const columns: Check = (value) => {
@@ -38,6 +42,7 @@ const columns: Check = (value) => {
 }
 
 const CHECKS: Record<string, Check> = {
+	date,
 	preset: oneOf('preset', Object.keys(PRESETS)),
 	sort: sortOf(['saved_at', 'updated_at', 'published_date', 'title', 'author', 'word_count', 'reading_progress']),
 	format: oneOf('format', ['list', 'table', 'card']),
@@ -46,6 +51,7 @@ const CHECKS: Record<string, Check> = {
 	showTags: bool('showTags'),
 	showSummary: bool('showSummary'),
 	warnings: bool('warnings'),
+	size,
 	group: oneOf('group', ['location', 'category', 'site']),
 }
 

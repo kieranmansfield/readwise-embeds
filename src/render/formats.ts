@@ -23,17 +23,27 @@ const BOOKS: Record<Format, (el: HTMLElement, rows: BookRow[], covers: boolean) 
 	card: bookCards,
 }
 
-/** Draws `items` under optional group headings, or `empty` when there are none. */
-export function drawGrouped<T>(el: HTMLElement, items: T[], keyOf: ((t: T) => string) | undefined, empty: string, draw: (box: HTMLElement, items: T[]) => void) {
+function gridBox(el: HTMLElement, size: number) {
+	const box = el.createDiv('rw-grid')
+	box.style.setProperty('--rw-card-size', `${size}px`)
+	return box
+}
+
+/**
+ * Draws `items` under optional group headings, or `empty` when there are none. With a `grid` size (px) the items
+ * go in a grid whose columns are at least that wide.
+ */
+// fallow-ignore-next-line complexity
+export function drawGrouped<T>(el: HTMLElement, items: T[], keyOf: ((t: T) => string) | undefined, empty: string, draw: (box: HTMLElement, items: T[]) => void, grid = 0) {
 	if (!items.length) return void el.createDiv({ cls: 'rw-empty', text: empty })
 	for (const g of groupBy(items, keyOf)) {
 		if (g.heading) el.createEl('h4', { cls: 'rw-group', text: g.heading })
-		draw(el, g.items)
+		draw(grid ? gridBox(el, grid) : el, g.items)
 	}
 }
 
-export const drawHighlightRows = (el: HTMLElement, rows: Row[], format: Format, show: Show, keyOf: ((r: Row) => string) | undefined, empty: string) =>
-	drawGrouped(el, rows, keyOf, empty, (box, items) => HIGHLIGHTS[format](box, items, show))
+export const drawHighlightRows = (el: HTMLElement, rows: Row[], format: Format, show: Show, keyOf: ((r: Row) => string) | undefined, empty: string, size = 0) =>
+	drawGrouped(el, rows, keyOf, empty, (box, items) => HIGHLIGHTS[format](box, items, show), format === 'card' ? size : 0)
 
-export const drawBookRows = (el: HTMLElement, rows: BookRow[], format: Format, covers: boolean, keyOf: ((r: BookRow) => string) | undefined, empty: string) =>
-	drawGrouped(el, rows, keyOf, empty, (box, items) => BOOKS[format](box, items, covers))
+export const drawBookRows = (el: HTMLElement, rows: BookRow[], format: Format, covers: boolean, keyOf: ((r: BookRow) => string) | undefined, empty: string, size = 0) =>
+	drawGrouped(el, rows, keyOf, empty, (box, items) => BOOKS[format](box, items, covers), format === 'card' ? size : 0)

@@ -23,3 +23,20 @@ describe('warnings key', () => {
 		expect(parseReaderParams('warnings: no').warnings).toHaveLength(1)
 	})
 })
+
+describe('size key', () => {
+	it('is 0 by default and accepts 0 or 120 to 800', () => {
+		expect(parseReaderParams('').params.size).toBe(0)
+		expect(parseReaderParams('size: 240').params.size).toBe(240)
+		expect(parseReaderParams('size: 50').warnings).toHaveLength(1)
+		expect(parseReaderParams('size: wide').params.size).toBe(0)
+	})
+})
+
+describe('date key', () => {
+	it('takes a real day only', () => {
+		expect(parseReaderParams('date: 2026-10-12').params.date).toBe('2026-10-12')
+		expect(parseReaderParams('date: 2026-02-30').warnings).toHaveLength(1)
+		expect(parseReaderParams('date: today').warnings).toHaveLength(1)
+	})
+})

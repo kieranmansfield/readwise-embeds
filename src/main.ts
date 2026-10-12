@@ -42,9 +42,9 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 		this.addSettingTab(new ReadwiseEmbedsSettingTab(this.app, this))
 		registerCommands(this)
 		this.registerMarkdownCodeBlockProcessor('readwise', (source, el, ctx) => {
-			const { defaultFormat, defaultLimit, showCovers } = this.settings
+			const { defaultFormat, defaultLimit, showCovers, linkNotes, noteIdProperty } = this.settings
 			const { params, warnings } = parseParams(source, { ...DEFAULT_PARAMS, format: defaultFormat, limit: defaultLimit })
-			const deps = { library: this.store, review: this.review, covers: showCovers }
+			const deps = { library: this.store, review: this.review, covers: showCovers, app: this.app, noteProperty: linkNotes ? noteIdProperty.trim() : '' }
 			ctx.addChild(new ReadwiseBlock(el, this.common(), deps, params, warnings))
 		})
 		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => {

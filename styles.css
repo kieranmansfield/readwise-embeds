@@ -42,6 +42,11 @@
 .rw-card-book { align-items: flex-start; }
 .rw-card-body { display: flex; flex-direction: column; gap: var(--size-4-1); min-width: 0; }
 .rw-card-title { font-size: var(--font-ui-medium); font-weight: var(--font-semibold); color: var(--text-normal); }
+/* Card grid (size key): columns at least --rw-card-size wide, cover on top. */
+.rw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--rw-card-size), 100%), 1fr)); gap: var(--size-4-3); margin: var(--size-4-2) 0; }
+.rw-grid .rw-card { flex-direction: column; margin: 0; }
+.rw-grid .rw-note-link { margin-left: var(--size-4-2); font-size: var(--font-ui-smaller); }
+.rw-cover { width: 100%; max-height: none; align-self: stretch; }
 .rw-cover { width: clamp(96px, 16vw, 200px); height: auto; max-height: clamp(128px, 22vw, 280px); flex: none; align-self: flex-start; object-fit: contain; border-radius: var(--radius-s); }
 
 /* Loading */
