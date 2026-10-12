@@ -6,7 +6,7 @@ import { createReadwiseClient } from './api/readwise'
 import { DEFAULT_PARAMS, parseParams } from './block/params'
 import { DEFAULT_READER_PARAMS, parseReaderParams } from './block/readerParams'
 import { createStore, shareInFlight } from './cache/cache'
-import { cacheFile } from './cache/persist'
+import { cacheFile, parseCache, parseDocs, serializeCache, serializeDocs } from './cache/persist'
 import { createDocStore } from './cache/docs'
 import { registerCommands } from './commands/commands'
 import type { EmbedBlock } from './render/block'
@@ -20,15 +20,20 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 	blocks = new Set<EmbedBlock>()
 	private token = () => this.app.secretStorage.getSecret(this.settings.readwiseTokenSecret)
 	client = createReadwiseClient(obsidianHttp, this.token)
-	// Reader's list endpoint allows 20 requests a minute across every block; a burst of 10 leaves headroom.
+	// Reader's list endpoint allows 20 requests a minute across every block; 18 with a small burst leaves headroom.
 	reader = createReaderClient(obsidianHttp, this.token, createLimiter({ capacity: 2, perMinute: 18 }).acquire)
-	cache = cacheFile(this.app, this.manifest.id)
+	cache = cacheFile(this.app, this.manifest.id, 'cache.json', parseCache, serializeCache)
+	docCache = cacheFile(this.app, this.manifest.id, 'reader-cache.json', parseDocs, serializeDocs)
 	store = createStore({
 		fetch: (since, onPage) => this.client.exportAll(since, onPage),
 		load: () => (this.settings.persistCache ? this.cache.load() : Promise.resolve(null)),
 		save: (snap) => (this.settings.persistCache ? this.cache.save(snap) : undefined),
 	})
-	docs = createDocStore({ fetch: (slice, onPage, onWait) => this.reader.list(slice, onPage, onWait) })
+	docs = createDocStore({
+		fetch: (slice, onPage, onWait) => this.reader.list({ ...slice, maxPages: this.settings.maxPages }, onPage, onWait),
+		load: () => (this.settings.persistCache ? this.docCache.load() : Promise.resolve(null)),
+		save: (saved) => (this.settings.persistCache ? this.docCache.save(saved) : undefined),
+	})
 	review = shareInFlight(() => this.client.review())
 
 	async onload() {
@@ -43,10 +48,10 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 			ctx.addChild(new ReadwiseBlock(el, this.common(), deps, params, warnings))
 		})
 		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => {
-			const { defaultFormat, defaultLimit, showCovers, maxPages } = this.settings
+			const { defaultFormat, defaultLimit, showCovers } = this.settings
 			const format = defaultFormat === 'quote' ? 'list' : defaultFormat
 			const { params, warnings } = parseReaderParams(source, { ...DEFAULT_READER_PARAMS, format, limit: defaultLimit })
-			ctx.addChild(new ReaderBlock(el, this.common(), { docs: this.docs, maxPages, covers: showCovers }, params, warnings))
+			ctx.addChild(new ReaderBlock(el, this.common(), { docs: this.docs, covers: showCovers }, params, warnings))
 		})
 	}
 

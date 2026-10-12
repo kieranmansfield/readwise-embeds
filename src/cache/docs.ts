@@ -2,18 +2,43 @@ import type { DocResult, DocSlice, RdDoc } from '../api/reader'
 import type { StoreEvent } from './retry'
 
 export interface DocEntry extends DocResult {
-	/** Epoch ms of the fetch. */
+	/** Epoch ms of the last successful sync of this location. */
 	fetchedAt: number
 }
 
+/** One location as saved to disk. */
+export interface SavedLocation {
+	docs: RdDoc[]
+	truncated: boolean
+	syncedAt: number
+	fullAt: number
+}
+export type SavedDocs = Record<string, SavedLocation>
+
 export interface DocStoreDeps {
-	fetch: (slice: DocSlice, onPage: (count: number) => void, onWait: (seconds: number) => void) => Promise<DocResult>
+	fetch: (slice: Pick<DocSlice, 'location' | 'updatedAfter'>, onPage: (count: number) => void, onWait: (seconds: number) => void) => Promise<DocResult>
+	/** Previously saved documents; null or a rejection means start empty. */
+	load?: () => Promise<SavedDocs | null>
+	/** Called after every successful sync, and on reset. Not awaited. */
+	save?: (saved: SavedDocs) => void
 	now?: () => number
 }
 
-const keyOf = (s: DocSlice) => JSON.stringify([s.location, s.category, s.maxPages])
+interface Held {
+	docs: Map<string, RdDoc>
+	truncated: boolean
+	syncedAt: number
+	fullAt: number
+}
 
-/** Documents from several slices as one list, each document once, and whether any slice was cut short. */
+/** A full download this old is repeated, since the API never reports deleted documents. */
+export const FULL_EVERY_MS = 7 * 24 * 3_600_000
+/** A `fullAt` that is always older than {@link FULL_EVERY_MS}, to force the next sync to start over. */
+const STALE = Number.MIN_SAFE_INTEGER
+/** Delta syncs start this far before the last one, so a document saved mid-sync is not missed. */
+const OVERLAP_MS = 5 * 60_000
+
+/** Documents from several locations as one list, each document once, and whether any was cut short. */
 export function mergeEntries(entries: DocResult[]): DocResult {
 	const byId = new Map<string, RdDoc>()
 	for (const e of entries) for (const d of e.docs) byId.set(d.id, d)
@@ -21,46 +46,79 @@ export function mergeEntries(entries: DocResult[]): DocResult {
 }
 
 /**
- * Reader documents kept per request slice, in memory. Blocks that ask for the same slice share one download
- * (the client waits out a 429 page by page), and a failed refresh keeps what was held.
+ * Reader documents kept per location, in memory and (via `load`/`save`) on disk. The first sync of a location
+ * downloads it all; later syncs ask only for what changed since the last one and merge it by id. A full download
+ * is repeated weekly because deletions are invisible to the API. Blocks share one sync per location, and a failed
+ * sync keeps what was held.
  */
-// ponytail: memory only, no incremental refresh; Reader queries are narrow, so a hit is one to ten requests
-export function createDocStore({ fetch, now = () => Date.now() }: DocStoreDeps) {
-	const held = new Map<string, DocEntry>()
+export function createDocStore({ fetch, load, save, now = () => Date.now() }: DocStoreDeps) {
+	const held = new Map<string, Held>()
 	const running = new Map<string, Promise<DocEntry>>()
 	const listeners = new Set<(e: StoreEvent) => void>()
 	const emit = (e: StoreEvent) => listeners.forEach((l) => l(e))
+	let loaded: Promise<void> | undefined
+	/** Resolves once saved documents, if any, have been read. Safe to call repeatedly. */
+	const ready = () =>
+		(loaded ??= (load?.() ?? Promise.resolve(null)).then(
+			(saved) => {
+				for (const [loc, s] of Object.entries(saved ?? {})) if (!held.has(loc)) held.set(loc, { ...s, docs: new Map(s.docs.map((d) => [d.id, d])) })
+			},
+			() => undefined
+		))
 
-	async function pull(slice: DocSlice, key: string): Promise<DocEntry> {
-		const result = await fetch(slice, (count) => emit({ type: 'progress', count }), (seconds) => emit({ type: 'wait', seconds }))
-		const entry = { ...result, fetchedAt: now() }
-		held.set(key, entry)
-		return entry
+	const entryOf = (h: Held): DocEntry => ({ docs: [...h.docs.values()], truncated: h.truncated, fetchedAt: h.syncedAt })
+	const persist = () => save?.(Object.fromEntries([...held].map(([loc, h]) => [loc, { docs: [...h.docs.values()], truncated: h.truncated, syncedAt: h.syncedAt, fullAt: h.fullAt }])))
+
+	async function pull(location: string): Promise<DocEntry> {
+		await ready()
+		const cur = held.get(location)
+		const startedAt = now()
+		const full = !cur || startedAt - cur.fullAt > FULL_EVERY_MS
+		const updatedAfter = full ? undefined : new Date(cur.syncedAt - OVERLAP_MS).toISOString()
+		const r = await fetch({ location, updatedAfter }, (count) => emit({ type: 'progress', count }), (seconds) => emit({ type: 'wait', seconds }))
+		const docs = full ? new Map<string, RdDoc>() : new Map(cur.docs)
+		for (const d of r.docs) docs.set(d.id, d)
+		// A cut-short delta missed changes, so the next sync starts over.
+		const next: Held = full
+			? { docs, truncated: r.truncated, syncedAt: startedAt, fullAt: startedAt }
+			: { docs, truncated: cur.truncated, syncedAt: startedAt, fullAt: r.truncated ? STALE : cur.fullAt }
+		held.set(location, next)
+		persist()
+		return entryOf(next)
 	}
 
-	const refresh = (slice: DocSlice): Promise<DocEntry> => {
-		const key = keyOf(slice)
-		const existing = running.get(key)
+	const refresh = (location: string): Promise<DocEntry> => {
+		const existing = running.get(location)
 		if (existing) return existing
-		const p = pull(slice, key).finally(() => running.delete(key))
-		running.set(key, p)
+		const p = pull(location).finally(() => running.delete(location))
+		running.set(location, p)
 		return p
 	}
 
 	return {
-		/** What is held for this slice right now, possibly stale. */
-		peek: (slice: DocSlice) => held.get(keyOf(slice)),
+		ready,
+		/** What is held for this location right now, possibly stale. */
+		peek: (location: string) => {
+			const h = held.get(location)
+			return h && entryOf(h)
+		},
+		/** Syncs the location: everything the first time, only changes after. */
 		refresh,
-		/** Held data if younger than `maxAgeMs`, else a refresh. */
-		get(slice: DocSlice, maxAgeMs: number): Promise<DocEntry> {
-			const e = held.get(keyOf(slice))
-			return e && now() - e.fetchedAt < maxAgeMs ? Promise.resolve(e) : refresh(slice)
+		/** Held data if synced less than `maxAgeMs` ago, else a sync. */
+		async get(location: string, maxAgeMs: number): Promise<DocEntry> {
+			await ready()
+			const h = held.get(location)
+			return h && now() - h.syncedAt < maxAgeMs ? entryOf(h) : refresh(location)
 		},
 		subscribe(listener: (e: StoreEvent) => void): () => void {
 			listeners.add(listener)
 			return () => void listeners.delete(listener)
 		},
-		reset: () => held.clear(),
+		/** Forgets everything, so the next sync downloads in full. */
+		reset() {
+			held.clear()
+			save?.({})
+		},
 	}
 }
 

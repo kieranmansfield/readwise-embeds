@@ -1,18 +1,18 @@
-import type { RdDoc, DocSlice } from '../api/reader'
+import type { RdDoc } from '../api/reader'
 import type { ReaderParams } from '../block/readerParams'
 import { mergeEntries, type DocStore } from '../cache/docs'
 import type { StoreEvent } from '../cache/retry'
 import type { Predicate } from '../filter/evaluate'
-import { planSlices, wantsHighlights } from '../filter/plan'
+import { planLocations, wantsHighlights } from '../filter/plan'
 import { blockQuery } from '../filter/query'
 import { readerSchema } from '../filter/readerFields'
+import { effectiveSearch } from '../block/presets'
 import { EmbedBlock, type BlockCommon } from './block'
 import { docGroupKey, emptyDocsText, selectDocs, truncationNotice } from './docs'
 import { drawDocs } from './docFormats'
 
 export interface ReaderDeps {
 	docs: DocStore
-	maxPages: number
 	covers: boolean
 }
 
@@ -22,7 +22,7 @@ type Held = { docs: RdDoc[]; truncated: boolean }
 export class ReaderBlock extends EmbedBlock {
 	private held?: Held
 	private test?: Predicate<RdDoc>
-	private slices: DocSlice[]
+	private locations: string[]
 	private keepHighlights: boolean
 	protected noun = 'documents'
 
@@ -33,10 +33,11 @@ export class ReaderBlock extends EmbedBlock {
 		private params: ReaderParams,
 		warnings: string[]
 	) {
-		super(el, common, warnings, params.search)
-		const { query, test, ast } = blockQuery(params.search, readerSchema)
+		const search = effectiveSearch(params.preset, params.search)
+		super(el, common, warnings, search)
+		const { query, test, ast } = blockQuery(search, readerSchema)
 		this.test = test
-		this.slices = planSlices(ast, deps.maxPages)
+		this.locations = planLocations(ast)
 		this.keepHighlights = wantsHighlights(ast)
 		if (query && 'error' in query) this.queryError = query
 	}
@@ -49,17 +50,19 @@ export class ReaderBlock extends EmbedBlock {
 		return !!this.held
 	}
 
-	/** Shows what other blocks already downloaded for these slices while the fetch runs. */
+	/** Shows what is already held for these locations while the fetch runs. */
 	protected start() {
-		const entries = this.slices.map((s) => this.deps.docs.peek(s))
-		if (entries.some((e) => !e)) return
-		this.held = mergeEntries(entries.filter((e) => !!e))
-		this.draw()
+		void this.deps.docs.ready().then(() => {
+			const entries = this.locations.map((l) => this.deps.docs.peek(l))
+			if (this.held || entries.some((e) => !e)) return
+			this.held = mergeEntries(entries.filter((e) => !!e))
+			this.draw()
+		})
 	}
 
 	protected async fetchData(force: boolean) {
 		const { docs } = this.deps
-		const entries = await Promise.all(this.slices.map((s) => (force ? docs.refresh(s) : docs.get(s, this.maxAgeMs))))
+		const entries = await Promise.all(this.locations.map((l) => (force ? docs.refresh(l) : docs.get(l, this.maxAgeMs))))
 		this.held = mergeEntries(entries)
 	}
 

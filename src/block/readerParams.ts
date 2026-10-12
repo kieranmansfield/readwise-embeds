@@ -1,9 +1,11 @@
+import { PRESETS } from './presets'
 import { bool, limit, oneOf, parseWith, sortOf, type Check } from './params'
 
 const COLUMNS = ['title', 'author', 'site', 'category', 'location', 'words', 'time', 'progress', 'saved', 'published', 'tags'] as const
 export type Column = (typeof COLUMNS)[number]
 
 export interface ReaderParams {
+	preset: string
 	search: string
 	sort: string
 	format: 'list' | 'table' | 'card'
@@ -15,6 +17,7 @@ export interface ReaderParams {
 }
 
 export const DEFAULT_READER_PARAMS: ReaderParams = {
+	preset: '',
 	search: '',
 	sort: '-saved_at',
 	format: 'list',
@@ -33,6 +36,7 @@ const columns: Check = (value) => {
 }
 
 const CHECKS: Record<string, Check> = {
+	preset: oneOf('preset', Object.keys(PRESETS)),
 	sort: sortOf(['saved_at', 'updated_at', 'published_date', 'title', 'author', 'word_count', 'reading_progress']),
 	format: oneOf('format', ['list', 'table', 'card']),
 	columns,

@@ -1,10 +1,8 @@
-import type { DocSlice } from '../api/reader'
 import type { Node } from './parse'
 
 type Term = Extract<Node, { type: 'term' }>
 
 const LOCATIONS = ['new', 'later', 'shortlist', 'archive', 'feed']
-const CATEGORIES = ['article', 'email', 'rss', 'highlight', 'note', 'pdf', 'epub', 'tweet', 'video']
 /** Where documents live apart from the feed, which can hold thousands of items nobody asked for. */
 const LIBRARY = ['new', 'later', 'shortlist', 'archive']
 
@@ -37,17 +35,15 @@ function mentionsFeed(ast: Node): boolean {
 }
 
 /**
- * Which downloads answer a query. Only what is certain to match is pushed into the request, so pushing can
- * never drop a correct result; the full filter still runs afterwards. With no location, the library
- * locations are fetched one by one and the feed is left out unless the query mentions it.
+ * Which locations answer a query. Only a plain positive top-level `in:` term narrows it, so it can never drop a
+ * correct result; the full filter still runs afterwards. With none, the library locations are used and the feed
+ * is left out unless the query mentions it.
  */
-export function planSlices(ast: Node | undefined, maxPages: number): DocSlice[] {
+export function planLocations(ast: Node | undefined): string[] {
 	const terms = ast ? topLevel(ast) : []
-	const category = pushed(terms, ['category', 'type'], CATEGORIES)
 	const location = pushed(terms, ['in', 'location'], LOCATIONS, { inbox: 'new' }) ?? (terms.some((t) => t.field === 'feed' && plain(t) && t.value.toLowerCase() === 'true') ? 'feed' : undefined)
-	if (location) return [{ location, category, maxPages }]
-	if (ast && mentionsFeed(ast)) return [{ category, maxPages }]
-	return LIBRARY.map((l) => ({ location: l, category, maxPages }))
+	if (location) return [location]
+	return ast && mentionsFeed(ast) ? LOCATIONS : LIBRARY
 }
 
 /** Highlight and note documents hang off a parent and are hidden unless the filter asks for them by category. */

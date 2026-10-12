@@ -3,9 +3,11 @@ import { RwError } from './api/errors'
 import type { HttpPort } from './api/http'
 import { createLimiter } from './api/limiter'
 import { createReaderClient, type DocSlice, type RdDoc } from './api/reader'
-import { createDocStore, mergeEntries } from './cache/docs'
+import { createDocStore, FULL_EVERY_MS, mergeEntries, type DocStoreDeps, type SavedDocs } from './cache/docs'
 import { readerSchema } from './filter/readerFields'
-import { planSlices, wantsHighlights } from './filter/plan'
+import { planLocations, wantsHighlights } from './filter/plan'
+import { effectiveSearch, PRESETS } from './block/presets'
+import { parseDocs, serializeDocs } from './cache/persist'
 import { compileQuery } from './filter/query'
 
 const NOW = new Date(2026, 5, 15).getTime()
@@ -63,26 +65,26 @@ describe('reader filter', () => {
 	})
 })
 
-describe('planSlices', () => {
-	const plan = (src: string) => planSlices(compile(src).ast, 10).map((s) => [s.location, s.category])
-	it('pushes plain positive top-level terms only', () => {
-		expect(plan('in:later AND category:article')).toEqual([['later', 'article']])
-		expect(plan('in:inbox')).toEqual([['new', undefined]])
-		expect(plan('feed:true')).toEqual([['feed', undefined]])
-		expect(plan('type:pdf AND tag:css')).toHaveLength(4)
+describe('planLocations', () => {
+	const plan = (src: string) => planLocations(compile(src).ast)
+	const LIBRARY = ['new', 'later', 'shortlist', 'archive']
+	it('narrows to a plain positive top-level in: term only', () => {
+		expect(plan('in:later AND category:article')).toEqual(['later'])
+		expect(plan('in:inbox')).toEqual(['new'])
+		expect(plan('feed:true')).toEqual(['feed'])
+		expect(plan('type:pdf AND tag:css')).toEqual(LIBRARY)
 	})
 
-	it('does not push under OR, NOT, other operators or partial values', () => {
-		expect(plan('in:later OR in:archive')).toHaveLength(4)
-		expect(plan('NOT in:later')).toHaveLength(4)
-		expect(plan('in__not:archive')).toHaveLength(4)
-		expect(plan('category:art')).toEqual(expect.arrayContaining([['later', undefined]]))
+	it('does not narrow under OR, NOT, other operators or partial values', () => {
+		expect(plan('in:later OR in:archive')).toEqual(LIBRARY)
+		expect(plan('NOT in:later')).toEqual(LIBRARY)
+		expect(plan('in__not:archive')).toEqual(LIBRARY)
 	})
 
-	it('fetches everything when the feed is mentioned, and leaves it out otherwise', () => {
-		expect(planSlices(undefined, 10).map((s) => s.location)).toEqual(['new', 'later', 'shortlist', 'archive'])
-		expect(plan('in:feed OR in:later')).toEqual([[undefined, undefined]])
-		expect(plan('in__not:feed')).toEqual([[undefined, undefined]])
+	it('includes the feed only when the query mentions it', () => {
+		expect(planLocations(undefined)).toEqual(LIBRARY)
+		expect(plan('in:feed OR in:later')).toEqual([...LIBRARY, 'feed'])
+		expect(plan('in__not:feed')).toEqual([...LIBRARY, 'feed'])
 	})
 
 	it('shows highlight and note documents only when asked for by category', () => {
@@ -117,6 +119,17 @@ describe('reader client', () => {
 })
 
 describe('reader client rate limits', () => {
+	it('sends updatedAfter, reports pages, and gives up after repeated 429s', async () => {
+		const urls: string[] = []
+		const http: HttpPort = { request: ({ url }) => (urls.push(url), Promise.resolve(urls.length === 1 ? { status: 200, json: { results: [doc()], nextPageCursor: 'c' } } : { status: 429, json: undefined, retryAfter: 1 })) }
+		const client = createReaderClient(http, () => 'tok', () => Promise.resolve(), () => Promise.resolve())
+		const counts: number[] = []
+		await expect(client.list({ location: 'later', updatedAfter: '2026-01-01T00:00:00.000Z', maxPages: 3 }, (n) => counts.push(n))).rejects.toThrow('rate limit')
+		expect(urls[0]).toContain('updatedAfter=2026-01-01')
+		expect(counts).toEqual([1])
+		expect(urls).toHaveLength(1 + 6)
+	})
+
 	it('waits out a 429 and asks for the same page again instead of restarting', async () => {
 		const replies = [
 			{ status: 200, json: { results: [doc({ id: '1' })], nextPageCursor: 'c1' } },
@@ -149,28 +162,80 @@ describe('limiter', () => {
 })
 
 describe('doc store', () => {
-	const slice: DocSlice = { location: 'later', maxPages: 10 }
 	const result = { docs: [doc()], truncated: false }
+	const HOUR = 3_600_000
 
-	it('shares in-flight fetches, serves fresh data, and refetches when stale', async () => {
+	it('shares in-flight syncs, serves fresh data, and syncs again when stale', async () => {
 		let t = 0
-		const fetch = vi.fn().mockResolvedValue(result)
+		const fetch = vi.fn<DocStoreDeps['fetch']>().mockResolvedValue(result)
 		const store = createDocStore({ fetch, now: () => t })
-		await Promise.all([store.refresh(slice), store.refresh(slice), store.get(slice, 1000)])
+		await Promise.all([store.refresh('later'), store.refresh('later'), store.get('later', 1000)])
 		expect(fetch).toHaveBeenCalledTimes(1)
-		await store.get(slice, 1000)
+		await store.get('later', 1000)
 		expect(fetch).toHaveBeenCalledTimes(1)
 		t = 5000
-		await store.get(slice, 1000)
+		await store.get('later', 1000)
 		expect(fetch).toHaveBeenCalledTimes(2)
 		store.reset()
-		expect(store.peek(slice)).toBeUndefined()
+		expect(store.peek('later')).toBeUndefined()
+	})
+
+	it('downloads in full once, then asks only for changes and merges them by id', async () => {
+		let t = 10 * HOUR
+		const fetch = vi
+			.fn<DocStoreDeps['fetch']>()
+			.mockResolvedValueOnce({ docs: [doc({ id: '1', title: 'old' }), doc({ id: '2' })], truncated: false })
+			.mockResolvedValueOnce({ docs: [doc({ id: '1', title: 'new' }), doc({ id: '3' })], truncated: false })
+		const store = createDocStore({ fetch, now: () => t })
+		await store.refresh('later')
+		t += HOUR
+		const e = await store.refresh('later')
+		expect(fetch.mock.calls[0][0]).toEqual({ location: 'later', updatedAfter: undefined })
+		expect(fetch.mock.calls[1][0].updatedAfter).toBe(new Date(10 * HOUR - 5 * 60_000).toISOString())
+		expect(e.docs.map((d) => d.title)).toEqual(['new', 'CSS tricks', 'CSS tricks'])
+		expect(e.docs.map((d) => d.id)).toEqual(['1', '2', '3'])
+	})
+
+	it('repeats the full download after a week, replacing deleted documents', async () => {
+		let t = 0
+		const fetch = vi.fn<DocStoreDeps['fetch']>().mockResolvedValueOnce({ docs: [doc({ id: '1' }), doc({ id: '2' })], truncated: false }).mockResolvedValueOnce({ docs: [doc({ id: '1' })], truncated: false })
+		const store = createDocStore({ fetch, now: () => t })
+		await store.refresh('later')
+		t = FULL_EVERY_MS + 1
+		const e = await store.refresh('later')
+		expect(fetch.mock.calls[1][0].updatedAfter).toBeUndefined()
+		expect(e.docs.map((d) => d.id)).toEqual(['1'])
+	})
+
+	it('starts over next time if a change sync was cut short', async () => {
+		let t = 0
+		const fetch = vi.fn<DocStoreDeps['fetch']>().mockResolvedValueOnce(result).mockResolvedValueOnce({ docs: [], truncated: true }).mockResolvedValue(result)
+		const store = createDocStore({ fetch, now: () => t })
+		await store.refresh('later')
+		t = HOUR
+		await store.refresh('later')
+		t = 2 * HOUR
+		await store.refresh('later')
+		expect(fetch.mock.calls[2][0].updatedAfter).toBeUndefined()
+	})
+
+	it('starts from saved documents, syncs only changes, and saves after each sync', async () => {
+		const saved: SavedDocs = { later: { docs: [doc({ id: '9' })], truncated: false, syncedAt: HOUR, fullAt: HOUR } }
+		const save = vi.fn<NonNullable<DocStoreDeps['save']>>()
+		const fetch = vi.fn<DocStoreDeps['fetch']>().mockResolvedValue({ docs: [], truncated: false })
+		const store = createDocStore({ fetch, load: () => Promise.resolve(saved), save, now: () => 2 * HOUR })
+		await store.ready()
+		expect(store.peek('later')?.docs.map((d) => d.id)).toEqual(['9'])
+		await store.refresh('later')
+		expect(fetch.mock.calls[0][0].updatedAfter).toBe(new Date(HOUR - 5 * 60_000).toISOString())
+		expect(save).toHaveBeenCalledTimes(1)
+		expect(save.mock.calls[0][0].later.syncedAt).toBe(2 * HOUR)
 	})
 
 	it('announces waits and progress from the fetch, and keeps held data on failure', async () => {
 		const fetch = vi
-			.fn()
-			.mockImplementationOnce((_s: DocSlice, onPage: (n: number) => void, onWait: (s: number) => void) => {
+			.fn<DocStoreDeps['fetch']>()
+			.mockImplementationOnce((_s: unknown, onPage: (n: number) => void, onWait: (s: number) => void) => {
 				onWait(3)
 				onPage(1)
 				return Promise.resolve(result)
@@ -179,18 +244,36 @@ describe('doc store', () => {
 		const store = createDocStore({ fetch })
 		const seen: unknown[] = []
 		store.subscribe((e) => seen.push(e))
-		await store.refresh(slice)
+		await store.refresh('later')
 		expect(seen).toEqual([
 			{ type: 'wait', seconds: 3 },
 			{ type: 'progress', count: 1 },
 		])
-		await expect(store.refresh(slice)).rejects.toThrow('boom')
-		expect(store.peek(slice)?.docs).toHaveLength(1)
+		await expect(store.refresh('later')).rejects.toThrow('boom')
+		expect(store.peek('later')?.docs).toHaveLength(1)
 	})
 
 	it('merges slices by id and flags truncation', () => {
 		const m = mergeEntries([{ docs: [doc({ id: '1' }), doc({ id: '2' })], truncated: false }, { docs: [doc({ id: '2' })], truncated: true }])
 		expect(m.docs.map((d) => d.id)).toEqual(['1', '2'])
 		expect(m.truncated).toBe(true)
+	})
+})
+
+describe('presets and saved documents', () => {
+	it('every preset compiles, and search narrows inside it', () => {
+		for (const f of Object.values(PRESETS)) compile(f)
+		expect(effectiveSearch('', 'tag:css')).toBe('tag:css')
+		expect(effectiveSearch('later', '')).toBe('in:later')
+		const q = effectiveSearch('later', 'tag:a OR tag:b')
+		expect(q).toBe('in:later AND (tag:a OR tag:b)')
+		expect(compile(q).test(doc({ location: 'archive', tags: { b: { name: 'b' } } }))).toBe(false)
+		expect(planLocations(compile(q).ast)).toEqual(['later'])
+	})
+
+	it('round-trips and rejects anything else', () => {
+		const saved: SavedDocs = { later: { docs: [doc()], truncated: false, syncedAt: 1, fullAt: 1 } }
+		expect(parseDocs(serializeDocs(saved))).toEqual(saved)
+		for (const bad of ['', 'nope', '{}', '{"v":2,"locations":{}}', '{"v":1,"locations":[]}']) expect(parseDocs(bad)).toBeNull()
 	})
 })

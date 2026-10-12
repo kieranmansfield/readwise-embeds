@@ -101,7 +101,7 @@ export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 				t.setValue(plugin.settings.persistCache).onChange(async (v) => {
 					plugin.settings.persistCache = v
 					await plugin.saveSettings()
-					if (!v) await plugin.cache.clear()
+					if (!v) await Promise.all([plugin.cache.clear(), plugin.docCache.clear()])
 				})
 			)
 	}

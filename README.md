@@ -81,6 +81,7 @@ limit: 25
 
 | Key | Default | Values |
 | --- | --- | --- |
+| `preset` | none | `inbox`, `later`, `shortlist`, `archive`, `feed`, `recent` (saved in the last 7 days), `unread`, `long-reads` (20+ minutes). A named filter; `search` narrows it further. |
 | `search` | none (every document in your library, feed excluded) | Reader-style filter (below) |
 | `sort` | `-saved_at` | `saved_at`, `updated_at`, `published_date`, `title`, `author`, `word_count`, `reading_progress`; a `-` prefix means descending |
 | `format` | setting (`list`) | `list`, `table`, `card` |
@@ -104,9 +105,9 @@ The grammar is the same as for highlights (`AND`, `OR`, `NOT`, parentheses, quot
 
 `shared`, `saved_count`, `rss_source` and anything that needs a document's highlights (`has:highlights`) are not available from the API or not built yet; using them shows an error instead of being ignored.
 
-How it fetches: the parts of your filter that are certain to match (`in:`, `category:`) are sent to Reader, and the whole filter then runs on what comes back, so a pushed term can never hide a correct result. With no `in:`, the inbox, later, shortlist and archive are fetched one by one and the feed is left out (mention `feed` in the filter to include it). Highlight and note entries are hidden unless the filter asks for that category. Reader allows 20 requests a minute across all blocks; requests queue, and blocks that need the same slice share one download. A download stops at **Maximum pages per query** (100 documents a page, default 10); when that cuts a result short, the block says so.
+How it fetches: each location (inbox, later, shortlist, archive; the feed only if the filter mentions `feed`) is downloaded once, and the whole filter then runs on the saved copy. An `in:` term only chooses which locations to look at. After the first download, a refresh asks Reader only for documents changed since the last sync (a few requests), so new saves, moves, tags and reading progress arrive quickly. Reader never reports deleted documents, so each location is downloaded in full again once a week; use **Reload everything from Readwise** to do it sooner. Highlight and note entries are hidden unless the filter asks for that category. Reader allows 20 requests a minute across all blocks; requests queue, a rate limit is waited out page by page rather than restarting, and blocks that need the same location share one sync. A first download stops at **Maximum pages per query** (100 documents a page, default 10) per location; when that cuts a result short, the block says so.
 
-Reader results are held in memory only.
+The copy is saved to `reader-cache.json` in the plugin folder (same setting and privacy note as below), so restarting Obsidian shows results immediately and syncs only changes.
 
 ## Refreshing
 
@@ -119,7 +120,7 @@ Reader results are held in memory only.
 ## Network and privacy
 
 - The only host contacted is `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The token is sent only in the `Authorization` header. There is no telemetry.
-- **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json` in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
+- **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json`, and your Reader documents (titles, authors, tags, notes, summaries) to `reader-cache.json`, in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
 - **Load cover images** is off by default. When on, cards load images directly from the sites they came from (without a referrer), which tells those sites your address.
 
 ## Install (beta)

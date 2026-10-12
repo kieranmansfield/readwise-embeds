@@ -40,7 +40,9 @@ export interface RdDoc {
 export interface DocSlice {
 	location?: string
 	category?: string
-	/** Page cap for this slice; part of the cache key. */
+	/** ISO time; only documents changed since then. */
+	updatedAfter?: string
+	/** Page cap for this request. */
 	maxPages: number
 }
 
@@ -48,6 +50,12 @@ export interface DocResult {
 	docs: RdDoc[]
 	/** The page cap stopped the fetch before the last page. */
 	truncated: boolean
+}
+
+/** The query string for one `/list/` page: only the parts that are set. */
+function listParams(filters: Pick<DocSlice, 'location' | 'category' | 'updatedAfter'>, pageCursor: string | null): string {
+	const entries = Object.entries({ ...filters, pageCursor }).filter((e): e is [string, string] => !!e[1])
+	return new URLSearchParams(entries).toString()
 }
 
 /** Times one page is retried after a 429 before the error goes up. */
@@ -76,15 +84,12 @@ export function createReaderClient(
 
 	return {
 		/** Pages through `/list/` (100 a page) up to `maxPages`, then reports whether more was left. */
-		async list({ location, category, maxPages }: DocSlice, onPage?: (count: number) => void, onWait?: (seconds: number) => void): Promise<DocResult> {
+		async list({ location, category, updatedAfter, maxPages }: DocSlice, onPage?: (count: number) => void, onWait?: (seconds: number) => void): Promise<DocResult> {
 			const docs: RdDoc[] = []
 			let cursor: string | null = null
 			for (let n = 0; n < maxPages; n++) {
-				const params: Record<string, string> = {}
-				if (location) params.location = location
-				if (category) params.category = category
-				if (cursor) params.pageCursor = cursor
-				const r = await page('/list/?' + new URLSearchParams(params).toString(), onWait)
+				const params = listParams({ location, category, updatedAfter }, cursor)
+				const r = await page('/list/?' + params, onWait)
 				docs.push(...(r.results ?? []))
 				onPage?.(docs.length)
 				cursor = r.nextPageCursor ?? null
