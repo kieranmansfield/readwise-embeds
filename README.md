@@ -122,7 +122,7 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 ## Panes
 
 - **Readwise library** (ribbon icon, or the command **Open Readwise library**) and **Reader library** (**Open Readwise documents**): panes for browsing without writing a block. The Readwise pane has tabs for Highlights, Sources (the books view) and Daily review, with a type menu (books, articles, tweets, podcasts, supplementals); the Reader pane has Inbox, Later, Shortlist, Archive and Feed; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
-- **Open Reader website** and **Open Readwise website**: Reader (read.readwise.io) or the main Readwise site (readwise.io) in a pane, signed in once for both, separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
+- **Open Reader website** and **Open Readwise website** (best with Obsidian's core **Web viewer** plugin turned on, which they then use; otherwise they fall back to a pane of the plugin's own): Reader (read.readwise.io) or the main Readwise site (readwise.io) in a pane, signed in once for both, separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
 
 ## Refreshing
 

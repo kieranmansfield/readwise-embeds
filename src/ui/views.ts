@@ -1,4 +1,4 @@
-import { ItemView, Platform, setIcon, type App, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
+import { ItemView, Notice, Platform, setIcon, type App, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
 import type ReadwiseEmbedsPlugin from '../main'
 import type { EmbedBlock } from '../render/block'
 
@@ -24,6 +24,28 @@ export async function openView(app: App, type: string) {
 	const leaf = existing ?? app.workspace.getLeaf('tab')
 	if (!existing) await leaf.setViewState({ type, active: true })
 	await app.workspace.revealLeaf(leaf)
+}
+
+/** The core Web viewer's view type; it is only registered while that core plugin is on. */
+const CORE_WEB_VIEWER = 'webviewer'
+
+/**
+ * Opens a Readwise website. On desktop with the core Web viewer on, that is the real browser pane, which is the
+ * most reliable; otherwise this plugin's own pane. Elsewhere a page cannot be embedded, so the system browser.
+ */
+// fallow-ignore-next-line complexity
+export async function openSite(app: App, type: string) {
+	const site = WEB_SITES.find((s) => s.type === type)
+	if (!site) return
+	if (!Platform.isDesktopApp) return void window.open(site.url)
+	// ponytail: internalPlugins is not in the public typings; this only asks whether the core plugin is on.
+	const internal = (app as unknown as { internalPlugins?: { getEnabledPluginById?: (id: string) => unknown } }).internalPlugins
+	if (internal?.getEnabledPluginById?.(CORE_WEB_VIEWER)) {
+		await app.workspace.getLeaf('tab').setViewState({ type: CORE_WEB_VIEWER, active: true, state: { url: site.url, navigate: true } })
+		return
+	}
+	new Notice('Turn on the Web viewer core plugin for a more reliable website pane.')
+	await openView(app, type)
 }
 
 interface Section {
