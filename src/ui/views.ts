@@ -92,17 +92,34 @@ interface LibraryState {
 	size: number
 	/** A Readwise category to show, or empty for all. */
 	type: string
+	/** A highlight colour to show, or empty for all. */
+	color: string
 }
 
 const TYPES: Record<string, string> = { '': 'All types', books: 'Books', articles: 'Articles', tweets: 'Tweets', podcasts: 'Podcasts', supplementals: 'Supplementals' }
+
+const COLORS: Record<string, string> = { '': 'All colours', yellow: 'Yellow', blue: 'Blue', pink: 'Pink', orange: 'Orange', green: 'Green', purple: 'Purple' }
+
+const SEARCH_FIELDS: Record<string, string[]> = { reader: ['title', 'author'], highlights: ['text', 'note', 'title', 'author'], books: ['title', 'author'] }
+
+/** Plain words match any of the section's text fields; text with a `field:` term is already a filter and passes through. */
+// fallow-ignore-next-line complexity
+function searchOf(text: string, section: Section): string {
+	if (!text || text.includes(':')) return text
+	const fields = SEARCH_FIELDS[section.kind === 'reader' ? 'reader' : section.id] ?? []
+	const words = text.replace(/["()]/g, ' ').split(' ').filter((w) => w && !/^(AND|OR|NOT)$/.test(w))
+	return words.map((w) => `(${fields.map((f) => `${f}:"${w}"`).join(' OR ')})`).join(' AND ')
+}
 
 /** The source lines of the block this view shows; the same keys as a code block. */
 // fallow-ignore-next-line complexity
 function sourceOf(s: LibraryState, section: Section): string {
 	const lines = section.kind === 'reader' ? [`preset: ${section.id}`] : [`view: ${section.id}`]
 	const typed = section.kind === 'readwise' && section.id !== 'review' && s.type ? `category:${s.type}` : ''
-	const text = section.id === 'review' ? '' : s.search.replace(/\s+/g, ' ').trim()
-	const search = typed && text ? `${typed} AND (${text})` : typed || text
+	const colored = section.id === 'highlights' && s.color ? `color:${s.color}` : ''
+	const scope = [typed, colored].filter(Boolean).join(' AND ')
+	const text = section.id === 'review' ? '' : searchOf(s.search.replace(/\s+/g, ' ').trim(), section)
+	const search = scope && text ? `${scope} AND (${text})` : scope || text
 	if (search) lines.push(`search: ${search}`)
 	lines.push(`format: ${s.format}`, 'limit: 200', 'warnings: false')
 	if (s.format === 'card') lines.push(`size: ${s.size}`)
@@ -122,7 +139,7 @@ export class LibraryView extends ItemView {
 		private kind: Kind
 	) {
 		super(leaf)
-		this.state = { section: this.sections()[0].id, search: '', format: 'card', size: 260, type: '' }
+		this.state = { section: this.sections()[0].id, search: '', format: 'card', size: 260, type: '', color: '' }
 	}
 
 	private sections() {
@@ -196,6 +213,15 @@ export class LibraryView extends ItemView {
 			}, 400)
 		}
 		if (this.kind === 'readwise' && this.section().id !== 'review') {
+			if (this.section().id === 'highlights') {
+				const color = tools.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Colour' } })
+				for (const [value, text] of Object.entries(COLORS)) color.createEl('option', { value, text })
+				color.value = this.state.color
+				color.onchange = () => {
+					this.state.color = color.value
+					this.show()
+				}
+			}
 			const type = tools.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Type' } })
 			for (const [value, text] of Object.entries(TYPES)) type.createEl('option', { value, text })
 			type.value = this.state.type
