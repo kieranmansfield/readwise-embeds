@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian'
+import { Platform, Plugin } from 'obsidian'
 import { obsidianHttp } from './api/http'
 import { createLimiter } from './api/limiter'
 import { createReaderClient } from './api/reader'
@@ -46,7 +46,7 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => ctx.addChild(this.readerBlock(el, source)))
 		this.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this, 'readwise'))
 		this.registerView(READER_LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this, 'reader'))
-		for (const site of WEB_SITES) this.registerView(site.type, (leaf) => new WebView(leaf, site))
+		if (Platform.isDesktopApp) for (const site of WEB_SITES) this.registerView(site.type, (leaf) => new WebView(leaf, site))
 		this.addRibbonIcon('library', 'Open Readwise library', () => void openView(this.app, LIBRARY_VIEW))
 		this.addRibbonIcon('inbox', 'Open Readwise documents', () => void openView(this.app, READER_LIBRARY_VIEW))
 	}

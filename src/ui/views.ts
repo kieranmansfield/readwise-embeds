@@ -1,4 +1,4 @@
-import { ItemView, Notice, Platform, setIcon, type App, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
+import { ItemView, Notice, setIcon, type App, type ViewStateResult, type WorkspaceLeaf } from 'obsidian'
 import type ReadwiseEmbedsPlugin from '../main'
 import type { EmbedBlock } from '../render/block'
 
@@ -6,6 +6,8 @@ export const LIBRARY_VIEW = 'readwise-embeds-library'
 export const READER_LIBRARY_VIEW = 'readwise-embeds-reader-library'
 export const WEB_VIEW = 'readwise-embeds-reader-web'
 export const READWISE_WEB_VIEW = 'readwise-embeds-readwise-web'
+export const CHAT_WEB_VIEW = 'readwise-embeds-chat-web'
+export const GHOSTREADER_WEB_VIEW = 'readwise-embeds-ghostreader-web'
 
 interface Site {
 	type: string
@@ -15,8 +17,10 @@ interface Site {
 }
 const READER: Site = { type: WEB_VIEW, name: 'Reader', url: 'https://read.readwise.io/', icon: 'book-open' }
 const READWISE: Site = { type: READWISE_WEB_VIEW, name: 'Readwise', url: 'https://readwise.io/dashboard', icon: 'globe' }
+const CHAT: Site = { type: CHAT_WEB_VIEW, name: 'Readwise chat', url: 'https://readwise.io/chat', icon: 'message-square' }
+const GHOSTREADER: Site = { type: GHOSTREADER_WEB_VIEW, name: 'Ghostreader', url: 'https://read.readwise.io/ghostreader', icon: 'ghost' }
 /** The website panes, one view type each. */
-export const WEB_SITES: Site[] = [READER, READWISE]
+export const WEB_SITES: Site[] = [READER, READWISE, CHAT, GHOSTREADER]
 
 /** Focuses an open view of this type, or opens one in a new tab. */
 export async function openView(app: App, type: string) {
@@ -29,19 +33,31 @@ export async function openView(app: App, type: string) {
 /** The core Web viewer's view type; it is only registered while that core plugin is on. */
 const CORE_WEB_VIEWER = 'webviewer'
 
+/** The right-sidebar Web viewer already showing a page under `url`, if there is one. */
+function openViewer(app: App, url: string) {
+	return app.workspace.getLeavesOfType(CORE_WEB_VIEWER).find((leaf) => {
+		const shown: unknown = leaf.getViewState().state?.url
+		return leaf.getRoot() === app.workspace.rightSplit && typeof shown === 'string' && shown.startsWith(url)
+	})
+}
+
 /**
- * Opens a Readwise website. On desktop with the core Web viewer on, that is the real browser pane, which is the
- * most reliable; otherwise this plugin's own pane. Elsewhere a page cannot be embedded, so the system browser.
+ * Opens a Readwise website (desktop only). With the core Web viewer on, that is the real browser pane, which is the
+ * most reliable (in the right sidebar if asked); otherwise this plugin's own pane.
  */
 // fallow-ignore-next-line complexity
-export async function openSite(app: App, type: string) {
+export async function openSite(app: App, type: string, { sidebar = false, fresh = false } = {}) {
 	const site = WEB_SITES.find((s) => s.type === type)
 	if (!site) return
-	if (!Platform.isDesktopApp) return void window.open(site.url)
 	// ponytail: internalPlugins is not in the public typings; this only asks whether the core plugin is on.
 	const internal = (app as unknown as { internalPlugins?: { getEnabledPluginById?: (id: string) => unknown } }).internalPlugins
 	if (internal?.getEnabledPluginById?.(CORE_WEB_VIEWER)) {
-		await app.workspace.getLeaf('tab').setViewState({ type: CORE_WEB_VIEWER, active: true, state: { url: site.url, navigate: true } })
+		// An open sidebar chat is reused, so it keeps its conversation unless a fresh one is asked for.
+		const open = sidebar ? openViewer(app, site.url) : undefined
+		if (open && !fresh) return void (await app.workspace.revealLeaf(open))
+		const leaf = open ?? (sidebar ? app.workspace.getRightLeaf(false) : null) ?? app.workspace.getLeaf('tab')
+		await leaf.setViewState({ type: CORE_WEB_VIEWER, active: true, state: { url: site.url, navigate: true } })
+		if (sidebar) await app.workspace.revealLeaf(leaf)
 		return
 	}
 	new Notice('Turn on the Web viewer core plugin for a more reliable website pane.')
@@ -222,7 +238,7 @@ export class LibraryView extends ItemView {
 	}
 }
 
-/** One of Readwise's websites in a pane. Desktop only: other platforms get a link, since a page cannot be embedded there. */
+/** One of Readwise's websites in a pane. Registered on desktop only, since it needs Electron's webview. */
 export class WebView extends ItemView {
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -246,12 +262,6 @@ export class WebView extends ItemView {
 		root.empty()
 		root.addClass('rw-web')
 		const note = root.createEl('p', { cls: 'rw-web-note' })
-		if (!Platform.isDesktopApp) {
-			// A page cannot be embedded here, so a link is all there is.
-			note.setText(`${this.site.name} cannot be shown inside Obsidian on this device.`)
-			root.createEl('a', { cls: 'rw-web-open', href: this.site.url, text: 'Open in your browser', attr: { target: '_blank', rel: 'noopener' } })
-			return Promise.resolve()
-		}
 		try {
 			note.setText(`Loading ${this.site.name}…`)
 			const web = root.createEl('webview' as 'div', { cls: 'rw-webview' })

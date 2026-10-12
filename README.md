@@ -122,7 +122,9 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 ## Panes
 
 - **Readwise library** (ribbon icon, or the command **Open Readwise library**) and **Reader library** (**Open Readwise documents**): panes for browsing without writing a block. The Readwise pane has tabs for Highlights, Sources (the books view) and Daily review, with a type menu (books, articles, tweets, podcasts, supplementals); the Reader pane has Inbox, Later, Shortlist, Archive and Feed; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
-- **Open Reader website** and **Open Readwise website** (best with Obsidian's core **Web viewer** plugin turned on, which they then use; otherwise they fall back to a pane of the plugin's own): Reader (read.readwise.io) or the main Readwise site (readwise.io) in a pane, signed in once for both, separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
+- **Open Reader website** and **Open Readwise website** (best with Obsidian's core **Web viewer** plugin turned on, which they then use; otherwise they fall back to a pane of the plugin's own): Reader (read.readwise.io) or the main Readwise site (readwise.io) in a pane, signed in once for both, separately from the plugin and kept signed in. The website and chat commands are desktop only and do not exist on mobile. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
+
+On desktop, **Open Readwise chat in the sidebar** puts Readwise's AI chat (readwise.io/chat) in the right sidebar beside your notes. It needs the core **Web viewer** plugin (without it the chat opens in a tab). Running it again focuses the same pane and keeps your conversation, which also survives a restart; **Start a new Readwise chat in the sidebar** begins a fresh one. **Open Ghostreader in the sidebar** (and **Start a new Ghostreader chat in the sidebar**) does the same for Reader's Ghostreader chat (read.readwise.io/ghostreader). Both are the sites' own pages, so the plugin neither sees nor stores the conversations.
 
 ## Refreshing
 
@@ -134,13 +136,13 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 
 ## Network and privacy
 
-- The plugin contacts only `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The website panes load read.readwise.io or readwise.io, but only when you open it. The token is sent only in the `Authorization` header. There is no telemetry.
+- The plugin contacts only `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The website panes load read.readwise.io or readwise.io (including its chat), but only when you open it. The token is sent only in the `Authorization` header. There is no telemetry.
 - **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json`, and your Reader documents (titles, authors, tags, notes, summaries) to `reader-cache.json`, in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
 - **Load cover images** is off by default. When on, cards load images directly from the sites they came from (without a referrer), which tells those sites your address.
 
 ## Install (beta)
 
-Not yet in the community plugin list. Install with [BRAT](https://github.com/TfTHacker/obsidian42-brat): add the beta plugin `kieranmansfield/readwise-embeds`, then enable **Readwise embeds**. Works on desktop and mobile; no desktop-only features are used.
+Not yet in the community plugin list. Install with [BRAT](https://github.com/TfTHacker/obsidian42-brat): add the beta plugin `kieranmansfield/readwise-embeds`, then enable **Readwise embeds**. Works on desktop and mobile; the website, chat and Ghostreader commands are desktop only and are not registered on mobile.
 
 Known gaps: the daily review and Reader response shapes (tags, `reading_time`, published dates) have not been checked against live data, and Reader's filter syntax is only partly documented, so edge cases may differ from Reader itself.
 
