@@ -48,10 +48,10 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 			ctx.addChild(new ReadwiseBlock(el, this.common(), deps, params, warnings))
 		})
 		this.registerMarkdownCodeBlockProcessor('reader', (source, el, ctx) => {
-			const { defaultFormat, defaultLimit, showCovers } = this.settings
+			const { defaultFormat, defaultLimit, showCovers, linkNotes, noteIdProperty } = this.settings
 			const format = defaultFormat === 'quote' ? 'list' : defaultFormat
 			const { params, warnings } = parseReaderParams(source, { ...DEFAULT_READER_PARAMS, format, limit: defaultLimit })
-			ctx.addChild(new ReaderBlock(el, this.common(), { docs: this.docs, covers: showCovers }, params, warnings))
+			ctx.addChild(new ReaderBlock(el, this.common(), { docs: this.docs, covers: showCovers, app: this.app, noteProperty: linkNotes ? noteIdProperty.trim() : '' }, params, warnings))
 		})
 	}
 

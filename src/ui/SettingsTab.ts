@@ -96,7 +96,7 @@ export class ReadwiseEmbedsSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Link to Readwise notes')
-			.setDesc('Add a link after each source in highlight blocks that opens the note for it in your vault. Applies to blocks rendered after the change.')
+			.setDesc('Add a link after each source in highlight and reader blocks that opens the note for it in your vault. Applies to blocks rendered after the change.')
 			.addToggle((t) =>
 				t.setValue(plugin.settings.linkNotes).onChange(async (v) => {
 					plugin.settings.linkNotes = v

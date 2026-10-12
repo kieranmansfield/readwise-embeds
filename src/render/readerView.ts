@@ -1,3 +1,5 @@
+import type { App } from 'obsidian'
+import { linkNotes } from './noteLinks'
 import type { RdDoc } from '../api/reader'
 import type { ReaderParams } from '../block/readerParams'
 import { mergeEntries, type DocStore } from '../cache/docs'
@@ -14,6 +16,9 @@ import { drawDocs } from './docFormats'
 export interface ReaderDeps {
 	docs: DocStore
 	covers: boolean
+	app: App
+	/** Frontmatter property to match notes on; empty turns note links off. */
+	noteProperty: string
 }
 
 /** True when a cut-short download still holds every document updated since `floor` (the API lists newest-updated first). */
@@ -85,6 +90,7 @@ export class ReaderBlock extends EmbedBlock {
 		const rows = selectDocs(this.held.docs, this.params, this.test, this.keepHighlights)
 		if (this.cutOff()) el.createDiv({ cls: 'rw-warning', text: truncationNotice(this.held.docs.length) })
 		drawDocs(el, rows, this.params, this.deps.covers, docGroupKey(this.params.group), emptyDocsText(this.params.search))
+		if (this.deps.noteProperty) linkNotes(el, this.deps.app, this.deps.noteProperty)
 	}
 }
 

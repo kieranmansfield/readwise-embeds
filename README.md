@@ -69,7 +69,7 @@ A mistake shows an error under the block with the position and, for a misspelt f
 
 In the `books` view a filter keeps books with at least one matching highlight, and the count shows only the matches.
 
-If a note in your vault has a frontmatter property equal to the book's Readwise id, a **note** link appears after the source and opens that note. The property is `id` by default (what the official Readwise plugin writes); change it, or turn the links off, in **Settings → Readwise embeds**. Hold Ctrl or Cmd to open it in a new tab. Nothing is written to the note.
+If a note in your vault has a frontmatter property equal to the book's Readwise id, a **note** link appears after the source (or, in `reader` blocks, after the title, matched on the document's Reader id) and opens that note. The property is `id` by default (what the official Readwise plugin writes); change it, or turn the links off, in **Settings → Readwise embeds**. Hold Ctrl or Cmd to open it in a new tab. Nothing is written to the note.
 
 ## Reader documents
 

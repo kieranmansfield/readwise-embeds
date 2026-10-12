@@ -19,6 +19,8 @@ function title(parent: HTMLElement, d: RdDoc, cls: string) {
 	const text = d.title || d.source_url || 'Untitled'
 	const el = d.url ? parent.createEl('a', { href: d.url, text }) : parent.createSpan({ text })
 	el.addClass(cls)
+	// Lets linkNotes add a link to this document's note beside the title.
+	parent.dataset.bookId = d.id
 }
 
 function original(parent: HTMLElement, d: RdDoc) {
