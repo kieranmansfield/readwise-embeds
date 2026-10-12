@@ -1,4 +1,5 @@
 import type { HttpPort } from './http'
+import { RwError } from './errors'
 import { createCaller } from './request'
 
 const BASE = 'https://readwise.io/api/v3'
@@ -49,20 +50,41 @@ export interface DocResult {
 	truncated: boolean
 }
 
-export function createReaderClient(http: HttpPort, getToken: () => string | null, beforeRequest: () => Promise<void>) {
+/** Times one page is retried after a 429 before the error goes up. */
+const PAGE_RETRIES = 5
+
+export function createReaderClient(
+	http: HttpPort,
+	getToken: () => string | null,
+	beforeRequest: () => Promise<void>,
+	sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => window.setTimeout(r, ms))
+) {
 	const call = createCaller(http, getToken, BASE, beforeRequest)
+
+	/** One page; on a 429 waits `Retry-After` and asks for the same page again, so a long download resumes instead of restarting. */
+	async function page(path: string, onWait?: (seconds: number) => void): Promise<{ results?: RdDoc[]; nextPageCursor?: string | null }> {
+		for (let attempt = 0; ; attempt++) {
+			try {
+				return (await call(path)) as { results?: RdDoc[]; nextPageCursor?: string | null }
+			} catch (e) {
+				if (!(e instanceof RwError) || e.kind !== 'rate-limit' || attempt >= PAGE_RETRIES) throw e
+				onWait?.(e.retryAfter)
+				await sleep(e.retryAfter * 1000)
+			}
+		}
+	}
 
 	return {
 		/** Pages through `/list/` (100 a page) up to `maxPages`, then reports whether more was left. */
-		async list({ location, category, maxPages }: DocSlice, onPage?: (count: number) => void): Promise<DocResult> {
+		async list({ location, category, maxPages }: DocSlice, onPage?: (count: number) => void, onWait?: (seconds: number) => void): Promise<DocResult> {
 			const docs: RdDoc[] = []
 			let cursor: string | null = null
-			for (let page = 0; page < maxPages; page++) {
+			for (let n = 0; n < maxPages; n++) {
 				const params: Record<string, string> = {}
 				if (location) params.location = location
 				if (category) params.category = category
 				if (cursor) params.pageCursor = cursor
-				const r = (await call('/list/?' + new URLSearchParams(params).toString())) as { results?: RdDoc[]; nextPageCursor?: string | null }
+				const r = await page('/list/?' + new URLSearchParams(params).toString(), onWait)
 				docs.push(...(r.results ?? []))
 				onPage?.(docs.length)
 				cursor = r.nextPageCursor ?? null

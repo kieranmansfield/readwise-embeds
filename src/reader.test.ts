@@ -116,6 +116,28 @@ describe('reader client', () => {
 	})
 })
 
+describe('reader client rate limits', () => {
+	it('waits out a 429 and asks for the same page again instead of restarting', async () => {
+		const replies = [
+			{ status: 200, json: { results: [doc({ id: '1' })], nextPageCursor: 'c1' } },
+			{ status: 429, json: undefined, retryAfter: 2 },
+			{ status: 200, json: { results: [doc({ id: '2' })], nextPageCursor: null } },
+		]
+		const urls: string[] = []
+		const http: HttpPort = { request: ({ url }) => (urls.push(url), Promise.resolve(replies.shift()!)) }
+		const sleep = vi.fn().mockResolvedValue(undefined)
+		const waits: number[] = []
+		const client = createReaderClient(http, () => 'tok', () => Promise.resolve(), sleep)
+		const r = await client.list({ maxPages: 5 }, undefined, (s) => waits.push(s))
+		expect(r.docs.map((d) => d.id)).toEqual(['1', '2'])
+		expect(urls).toHaveLength(3)
+		expect(urls[1]).toContain('pageCursor=c1')
+		expect(urls[2]).toContain('pageCursor=c1')
+		expect(waits).toEqual([2])
+		expect(sleep).toHaveBeenCalledWith(2000)
+	})
+})
+
 describe('limiter', () => {
 	it('allows a burst then spaces requests, in order', async () => {
 		let t = 0
@@ -145,15 +167,23 @@ describe('doc store', () => {
 		expect(store.peek(slice)).toBeUndefined()
 	})
 
-	it('retries once after a 429, announcing the wait, and keeps held data on failure', async () => {
-		const fetch = vi.fn().mockRejectedValueOnce(new RwError('rate-limit', 'slow', 3)).mockResolvedValueOnce(result).mockRejectedValue(new RwError('server', 'boom'))
-		const sleep = vi.fn().mockResolvedValue(undefined)
-		const store = createDocStore({ fetch, sleep })
+	it('announces waits and progress from the fetch, and keeps held data on failure', async () => {
+		const fetch = vi
+			.fn()
+			.mockImplementationOnce((_s: DocSlice, onPage: (n: number) => void, onWait: (s: number) => void) => {
+				onWait(3)
+				onPage(1)
+				return Promise.resolve(result)
+			})
+			.mockRejectedValue(new RwError('server', 'boom'))
+		const store = createDocStore({ fetch })
 		const seen: unknown[] = []
 		store.subscribe((e) => seen.push(e))
 		await store.refresh(slice)
-		expect(seen).toEqual([{ type: 'wait', seconds: 3 }])
-		expect(sleep).toHaveBeenCalledWith(3000)
+		expect(seen).toEqual([
+			{ type: 'wait', seconds: 3 },
+			{ type: 'progress', count: 1 },
+		])
 		await expect(store.refresh(slice)).rejects.toThrow('boom')
 		expect(store.peek(slice)?.docs).toHaveLength(1)
 	})

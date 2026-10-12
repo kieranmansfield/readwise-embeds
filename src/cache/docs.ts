@@ -1,5 +1,5 @@
 import type { DocResult, DocSlice, RdDoc } from '../api/reader'
-import { withRateLimitRetry, type StoreEvent } from './retry'
+import type { StoreEvent } from './retry'
 
 export interface DocEntry extends DocResult {
 	/** Epoch ms of the fetch. */
@@ -7,9 +7,8 @@ export interface DocEntry extends DocResult {
 }
 
 export interface DocStoreDeps {
-	fetch: (slice: DocSlice, onPage: (count: number) => void) => Promise<DocResult>
+	fetch: (slice: DocSlice, onPage: (count: number) => void, onWait: (seconds: number) => void) => Promise<DocResult>
 	now?: () => number
-	sleep?: (ms: number) => Promise<void>
 }
 
 const keyOf = (s: DocSlice) => JSON.stringify([s.location, s.category, s.maxPages])
@@ -22,18 +21,18 @@ export function mergeEntries(entries: DocResult[]): DocResult {
 }
 
 /**
- * Reader documents kept per request slice, in memory. Blocks that ask for the same slice share one download,
- * a 429 waits `Retry-After` and retries once, and a failed refresh keeps what was held.
+ * Reader documents kept per request slice, in memory. Blocks that ask for the same slice share one download
+ * (the client waits out a 429 page by page), and a failed refresh keeps what was held.
  */
 // ponytail: memory only, no incremental refresh; Reader queries are narrow, so a hit is one to ten requests
-export function createDocStore({ fetch, now = () => Date.now(), sleep = (ms) => new Promise((r) => window.setTimeout(r, ms)) }: DocStoreDeps) {
+export function createDocStore({ fetch, now = () => Date.now() }: DocStoreDeps) {
 	const held = new Map<string, DocEntry>()
 	const running = new Map<string, Promise<DocEntry>>()
 	const listeners = new Set<(e: StoreEvent) => void>()
 	const emit = (e: StoreEvent) => listeners.forEach((l) => l(e))
 
 	async function pull(slice: DocSlice, key: string): Promise<DocEntry> {
-		const result = await withRateLimitRetry((onPage) => fetch(slice, onPage), emit, sleep)
+		const result = await fetch(slice, (count) => emit({ type: 'progress', count }), (seconds) => emit({ type: 'wait', seconds }))
 		const entry = { ...result, fetchedAt: now() }
 		held.set(key, entry)
 		return entry

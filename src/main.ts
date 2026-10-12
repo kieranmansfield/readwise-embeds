@@ -21,14 +21,14 @@ export default class ReadwiseEmbedsPlugin extends Plugin {
 	private token = () => this.app.secretStorage.getSecret(this.settings.readwiseTokenSecret)
 	client = createReadwiseClient(obsidianHttp, this.token)
 	// Reader's list endpoint allows 20 requests a minute across every block; a burst of 10 leaves headroom.
-	reader = createReaderClient(obsidianHttp, this.token, createLimiter({ capacity: 10, perMinute: 20 }).acquire)
+	reader = createReaderClient(obsidianHttp, this.token, createLimiter({ capacity: 2, perMinute: 18 }).acquire)
 	cache = cacheFile(this.app, this.manifest.id)
 	store = createStore({
 		fetch: (since, onPage) => this.client.exportAll(since, onPage),
 		load: () => (this.settings.persistCache ? this.cache.load() : Promise.resolve(null)),
 		save: (snap) => (this.settings.persistCache ? this.cache.save(snap) : undefined),
 	})
-	docs = createDocStore({ fetch: (slice, onPage) => this.reader.list(slice, onPage) })
+	docs = createDocStore({ fetch: (slice, onPage, onWait) => this.reader.list(slice, onPage, onWait) })
 	review = shareInFlight(() => this.client.review())
 
 	async onload() {
