@@ -19,7 +19,7 @@ export function linkNotes(el: HTMLElement, app: App, property: string) {
 	sources.forEach((src) => {
 		const file = notes.get(src.dataset.bookId ?? '')
 		if (!file) return
-		const link = src.createEl('a', { cls: 'internal-link rw-note-link', text: 'note', attr: { 'data-href': file.path, href: file.path, 'aria-label': `Open ${file.basename}` } })
+		const link = src.createEl('a', { cls: 'internal-link rw-note-link', text: 'Note', attr: { 'data-href': file.path, href: file.path, 'aria-label': `Open ${file.basename}` } })
 		link.onclick = (e) => {
 			e.preventDefault()
 			void app.workspace.openLinkText(file.path, '', e.ctrlKey || e.metaKey)

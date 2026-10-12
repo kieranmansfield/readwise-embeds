@@ -48,9 +48,10 @@ export const size: Check = (value) => {
 
 /** A real calendar day, `YYYY-MM-DD`, as a daily-note template can fill in. */
 export const date: Check = (value) => {
-	const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-	const d = m && new Date(+m[1], +m[2] - 1, +m[3])
-	return d && d.getMonth() === +m![2] - 1 && d.getDate() === +m![3] ? { value } : { error: 'date must be a real day like 2026-10-12.' }
+	const [y, mo, day] = value.split('-').map(Number)
+	const d = new Date(y, mo - 1, day)
+	const real = /^\d{4}-\d{2}-\d{2}$/.test(value) && d.getMonth() === mo - 1 && d.getDate() === day
+	return real ? { value } : { error: 'date must be a real day like 2026-10-12.' }
 }
 
 export const limit: Check = (value) => {
