@@ -1,6 +1,6 @@
 {
 	"name": "readwise-embeds",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "Live, filtered views of your Readwise highlights and Reader documents in code blocks.",
 	"main": "main.js",
 	"scripts": {
