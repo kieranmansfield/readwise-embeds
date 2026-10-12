@@ -5,7 +5,18 @@ import type { EmbedBlock } from '../render/block'
 export const LIBRARY_VIEW = 'readwise-embeds-library'
 export const READER_LIBRARY_VIEW = 'readwise-embeds-reader-library'
 export const WEB_VIEW = 'readwise-embeds-reader-web'
-const READER_URL = 'https://read.readwise.io/'
+export const READWISE_WEB_VIEW = 'readwise-embeds-readwise-web'
+
+interface Site {
+	type: string
+	name: string
+	url: string
+	icon: string
+}
+const READER: Site = { type: WEB_VIEW, name: 'Reader', url: 'https://read.readwise.io/', icon: 'book-open' }
+const READWISE: Site = { type: READWISE_WEB_VIEW, name: 'Readwise', url: 'https://readwise.io/dashboard', icon: 'globe' }
+/** The website panes, one view type each. */
+export const WEB_SITES: Site[] = [READER, READWISE]
 
 /** Focuses an open view of this type, or opens one in a new tab. */
 export async function openView(app: App, type: string) {
@@ -31,7 +42,7 @@ const SECTIONS: Section[] = [
 	{ id: 'archive', label: 'Archive', kind: 'reader' },
 	{ id: 'feed', label: 'Feed', kind: 'reader' },
 	{ id: 'highlights', label: 'Highlights', kind: 'readwise' },
-	{ id: 'books', label: 'Books', kind: 'readwise' },
+	{ id: 'books', label: 'Sources', kind: 'readwise' },
 	{ id: 'review', label: 'Daily review', kind: 'readwise' },
 ]
 
@@ -41,13 +52,20 @@ interface LibraryState {
 	search: string
 	format: Format
 	size: number
+	/** A Readwise category to show, or empty for all. */
+	type: string
 }
+
+const TYPES: Record<string, string> = { '': 'All types', books: 'Books', articles: 'Articles', tweets: 'Tweets', podcasts: 'Podcasts', supplementals: 'Supplementals' }
 
 /** The source lines of the block this view shows; the same keys as a code block. */
 // fallow-ignore-next-line complexity
 function sourceOf(s: LibraryState, section: Section): string {
 	const lines = section.kind === 'reader' ? [`preset: ${section.id}`] : [`view: ${section.id}`]
-	if (s.search.trim() && section.id !== 'review') lines.push(`search: ${s.search.replace(/\s+/g, ' ').trim()}`)
+	const typed = section.kind === 'readwise' && section.id !== 'review' && s.type ? `category:${s.type}` : ''
+	const text = section.id === 'review' ? '' : s.search.replace(/\s+/g, ' ').trim()
+	const search = typed && text ? `${typed} AND (${text})` : typed || text
+	if (search) lines.push(`search: ${search}`)
 	lines.push(`format: ${s.format}`, 'limit: 200', 'warnings: false')
 	if (s.format === 'card') lines.push(`size: ${s.size}`)
 	return lines.join('\n')
@@ -66,7 +84,7 @@ export class LibraryView extends ItemView {
 		private kind: Kind
 	) {
 		super(leaf)
-		this.state = { section: this.sections()[0].id, search: '', format: 'card', size: 260 }
+		this.state = { section: this.sections()[0].id, search: '', format: 'card', size: 260, type: '' }
 	}
 
 	private sections() {
@@ -118,6 +136,7 @@ export class LibraryView extends ItemView {
 		this.show()
 	}
 
+	// fallow-ignore-next-line complexity
 	private toolbar(bar: HTMLElement) {
 		const tabs = bar.createDiv({ cls: 'rw-lib-tabs', attr: { role: 'tablist' } })
 		for (const s of this.sections()) {
@@ -137,6 +156,15 @@ export class LibraryView extends ItemView {
 				this.state.search = search.value
 				this.show()
 			}, 400)
+		}
+		if (this.kind === 'readwise' && this.section().id !== 'review') {
+			const type = tools.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Type' } })
+			for (const [value, text] of Object.entries(TYPES)) type.createEl('option', { value, text })
+			type.value = this.state.type
+			type.onchange = () => {
+				this.state.type = type.value
+				this.show()
+			}
 		}
 		const format = tools.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Layout' } })
 		for (const f of ['list', 'card', 'table'] as const) format.createEl('option', { value: f, text: f[0].toUpperCase() + f.slice(1) })
@@ -172,20 +200,23 @@ export class LibraryView extends ItemView {
 	}
 }
 
-/** Reader's website in a pane. Desktop only: other platforms get a link, since a page cannot be embedded there. */
-export class ReaderWebView extends ItemView {
-	constructor(leaf: WorkspaceLeaf) {
+/** One of Readwise's websites in a pane. Desktop only: other platforms get a link, since a page cannot be embedded there. */
+export class WebView extends ItemView {
+	constructor(
+		leaf: WorkspaceLeaf,
+		private site: Site
+	) {
 		super(leaf)
 	}
 
 	getViewType() {
-		return WEB_VIEW
+		return this.site.type
 	}
 	getDisplayText() {
-		return 'Reader'
+		return this.site.name
 	}
 	getIcon() {
-		return 'book-open'
+		return this.site.icon
 	}
 
 	onOpen() {
@@ -193,12 +224,12 @@ export class ReaderWebView extends ItemView {
 		root.empty()
 		root.addClass('rw-web')
 		if (Platform.isDesktopApp) {
-			const web = root.createEl('webview' as 'div', { cls: 'rw-webview', attr: { src: READER_URL, partition: 'persist:readwise-embeds' } })
+			const web = root.createEl('webview' as 'div', { cls: 'rw-webview', attr: { src: this.site.url, partition: 'persist:readwise-embeds' } })
 			web.setAttribute('allowpopups', 'true')
 		} else {
 			// A page cannot be embedded here, so a link is all there is.
-			root.createEl('p', { text: 'Reader cannot be shown inside Obsidian on this device.' })
-			root.createEl('a', { cls: 'rw-web-open', href: READER_URL, text: 'Open in your browser', attr: { target: '_blank', rel: 'noopener' } })
+			root.createEl('p', { text: `${this.site.name} cannot be shown inside Obsidian on this device.` })
+			root.createEl('a', { cls: 'rw-web-open', href: this.site.url, text: 'Open in your browser', attr: { target: '_blank', rel: 'noopener' } })
 		}
 		return Promise.resolve()
 	}

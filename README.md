@@ -119,8 +119,8 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 
 ## Panes
 
-- **Readwise library** (ribbon icon, or the command **Open Readwise library**) and **Reader library** (**Open Readwise documents**): panes for browsing without writing a block. The Readwise pane has tabs for Highlights, Books and Daily review; the Reader pane has Inbox, Later, Shortlist, Archive and Feed; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
-- **Open Readwise website**: Reader's website (read.readwise.io) in a pane, signed in separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
+- **Readwise library** (ribbon icon, or the command **Open Readwise library**) and **Reader library** (**Open Readwise documents**): panes for browsing without writing a block. The Readwise pane has tabs for Highlights, Sources (the books view) and Daily review, with a type menu (books, articles, tweets, podcasts, supplementals); the Reader pane has Inbox, Later, Shortlist, Archive and Feed; a filter box that takes the same syntax as a block; a layout menu; and, for cards, a size slider. It shows the same data as your blocks, from the same saved copy, with the same **Note** links.
+- **Open Reader website** and **Open Readwise website**: Reader (read.readwise.io) or the main Readwise site (readwise.io) in a pane, signed in once for both, separately from the plugin and kept signed in. Desktop only; elsewhere the pane offers a link to open it in your browser. This is the real Reader, so reading, highlighting and triage happen there; the plugin does not read what you do in it.
 
 ## Refreshing
 
@@ -132,7 +132,7 @@ The copy is saved to `reader-cache.json` in the plugin folder (same setting and 
 
 ## Network and privacy
 
-- The plugin contacts only `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The **Open Readwise Reader** pane loads read.readwise.io, but only when you open it. The token is sent only in the `Authorization` header. There is no telemetry.
+- The plugin contacts only `readwise.io` (the Readwise v2 and Reader v3 APIs), over HTTPS. The website panes load read.readwise.io or readwise.io, but only when you open it. The token is sent only in the `Authorization` header. There is no telemetry.
 - **Keep a copy of your library on disk** is on by default. It saves your highlight text to `cache.json`, and your Reader documents (titles, authors, tags, notes, summaries) to `reader-cache.json`, in this plugin's folder inside your vault so restarts are fast. If you sync or publish that folder, turn the setting off (doing so deletes the file); the same goes for `data.json`. The token itself is not in either file.
 - **Load cover images** is off by default. When on, cards load images directly from the sites they came from (without a referrer), which tells those sites your address.
 
