@@ -1,7 +1,7 @@
 {
 	"id": "readwise-embeds",
 	"name": "Readwise embeds",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"minAppVersion": "1.13.2",
 	"description": "Live, filtered views of your Readwise highlights and Reader documents in code blocks.",
 	"author": "Kieran Mansfield",
