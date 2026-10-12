@@ -1,3 +1,4 @@
+import { parseDate } from './dates'
 import type { Node } from './parse'
 
 type Term = Extract<Node, { type: 'term' }>
@@ -49,4 +50,14 @@ export function planLocations(ast: Node | undefined): string[] {
 /** Highlight and note documents hang off a parent and are hidden unless the filter asks for them by category. */
 export function wantsHighlights(ast: Node | undefined): boolean {
 	return !!ast && walk(ast).some((t) => ['category', 'type'].includes(t.field) && /highlight|note/i.test(t.value))
+}
+
+/**
+ * The earliest time a match can have been updated, when a top-level `saved__after` says so
+ * (a document is updated no earlier than it was saved). Lets a cut-short download still answer such a query.
+ */
+export function updatedFloor(ast: Node | undefined, now: number): number | undefined {
+	const floors = (ast ? topLevel(ast) : []).filter((t) => t.field === 'saved' && t.op === 'after').map((t) => parseDate(t.value, now))
+	const valid = floors.filter((f): f is number => f !== null)
+	return valid.length ? Math.max(...valid) : undefined
 }

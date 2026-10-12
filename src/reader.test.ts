@@ -5,7 +5,7 @@ import { createLimiter } from './api/limiter'
 import { createReaderClient, type DocSlice, type RdDoc } from './api/reader'
 import { createDocStore, FULL_EVERY_MS, mergeEntries, type DocStoreDeps, type SavedDocs } from './cache/docs'
 import { readerSchema } from './filter/readerFields'
-import { planLocations, wantsHighlights } from './filter/plan'
+import { planLocations, updatedFloor, wantsHighlights } from './filter/plan'
 import { effectiveSearch, PRESETS } from './block/presets'
 import { parseDocs, serializeDocs } from './cache/persist'
 import { compileQuery } from './filter/query'
@@ -62,6 +62,20 @@ describe('reader filter', () => {
 		expect(err('words:lots')).toContain('must be a number')
 		expect(err('words__before:2020-01-01')).toContain('not valid here')
 		expect(err('tga:css')).toContain('Did you mean "tag"?')
+	})
+})
+
+describe('updatedFloor', () => {
+	const now = new Date(2026, 5, 10).getTime()
+	const floor = (src: string) => updatedFloor(compile(src).ast, now)
+	it('reads a top-level saved lower bound', () => {
+		expect(floor('in:later AND saved__after:"1 day ago"')).toBe(new Date(2026, 5, 9).getTime())
+		expect(floor('saved__after:2026-06-01')).toBe(new Date(2026, 5, 1).getTime())
+	})
+	it('ignores bounds under OR or NOT, and other fields', () => {
+		expect(floor('saved__after:2026-06-01 OR in:later')).toBeUndefined()
+		expect(floor('NOT saved__after:2026-06-01')).toBeUndefined()
+		expect(floor('published__after:2026-06-01')).toBeUndefined()
 	})
 })
 
