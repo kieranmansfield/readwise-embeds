@@ -15,3 +15,11 @@ describe('parseReaderParams', () => {
 		expect(warnings).toHaveLength(6)
 	})
 })
+
+describe('warnings key', () => {
+	it('defaults on and can be turned off', () => {
+		expect(parseReaderParams('').params.warnings).toBe(true)
+		expect(parseReaderParams('warnings: false').params.warnings).toBe(false)
+		expect(parseReaderParams('warnings: no').warnings).toHaveLength(1)
+	})
+})

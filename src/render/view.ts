@@ -22,6 +22,8 @@ interface Data {
 
 const fromBooks = (books: RwBook[]): Data => ({ books, rows: highlightRows(books) })
 
+const noticesOf = (params: BlockParams, warnings: string[]) => (params.warnings ? [...warnings, ...resolveLayout(params).notes] : [])
+
 /** One `readwise` block: highlights, books or the daily review. */
 export class ReadwiseBlock extends EmbedBlock {
 	private data?: Data
@@ -36,7 +38,7 @@ export class ReadwiseBlock extends EmbedBlock {
 		warnings: string[]
 	) {
 		const { query, test } = blockQuery(params.view === 'review' ? '' : params.search, readwiseSchema)
-		super(el, common, [...warnings, ...resolveLayout(params).notes], params.search)
+		super(el, common, noticesOf(params, warnings), params.search)
 		this.test = test
 		if (query && 'error' in query) this.queryError = query
 	}

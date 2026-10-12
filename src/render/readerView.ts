@@ -42,7 +42,7 @@ export class ReaderBlock extends EmbedBlock {
 		warnings: string[]
 	) {
 		const search = effectiveSearch(params.preset, params.search)
-		super(el, common, warnings, search)
+		super(el, common, params.warnings ? warnings : [], search)
 		const { query, test, ast } = blockQuery(search, readerSchema)
 		this.test = test
 		this.locations = planLocations(ast)
@@ -75,10 +75,15 @@ export class ReaderBlock extends EmbedBlock {
 		this.held = mergeEntries(entries)
 	}
 
+	/** Whether to tell the reader the saved copy was cut short. */
+	private cutOff() {
+		return this.params.warnings && !!this.held?.truncated && !coversFloor(this.held.docs, this.floor)
+	}
+
 	protected drawContent(el: HTMLElement) {
 		if (!this.held) return
 		const rows = selectDocs(this.held.docs, this.params, this.test, this.keepHighlights)
-		if (this.held.truncated && !coversFloor(this.held.docs, this.floor)) el.createDiv({ cls: 'rw-warning', text: truncationNotice(this.held.docs.length) })
+		if (this.cutOff()) el.createDiv({ cls: 'rw-warning', text: truncationNotice(this.held.docs.length) })
 		drawDocs(el, rows, this.params, this.deps.covers, docGroupKey(this.params.group), emptyDocsText(this.params.search))
 	}
 }

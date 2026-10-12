@@ -14,6 +14,7 @@ export interface ReaderParams {
 	showTags: boolean
 	showSummary: boolean
 	group: '' | 'location' | 'category' | 'site'
+	warnings: boolean
 }
 
 export const DEFAULT_READER_PARAMS: ReaderParams = {
@@ -26,6 +27,7 @@ export const DEFAULT_READER_PARAMS: ReaderParams = {
 	showTags: true,
 	showSummary: false,
 	group: '',
+	warnings: true,
 }
 
 const columns: Check = (value) => {
@@ -43,6 +45,7 @@ const CHECKS: Record<string, Check> = {
 	limit,
 	showTags: bool('showTags'),
 	showSummary: bool('showSummary'),
+	warnings: bool('warnings'),
 	group: oneOf('group', ['location', 'category', 'site']),
 }
 

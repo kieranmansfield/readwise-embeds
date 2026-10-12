@@ -33,6 +33,7 @@ One `key: value` line each. Only `search` is commonly needed.
 | `limit` | setting (`50`) | 1–500 |
 | `showNotes`, `showTags`, `showSource` | `true` | `true`, `false` |
 | `group` | none | `book`, `category` (`category` only for the books view) |
+| `warnings` | `true` | `false` hides notices under the block (bad keys, layout notes). Filter errors still show. |
 
 ### Formats
 
@@ -90,6 +91,7 @@ limit: 25
 | `showTags` | `true` | `true`, `false` |
 | `showSummary` | `false` | `true`, `false` |
 | `group` | none | `location`, `category`, `site` |
+| `warnings` | `true` | `false` hides notices under the block, including the "first N documents" cut-off notice. Filter errors still show. |
 
 The grammar is the same as for highlights (`AND`, `OR`, `NOT`, parentheses, quotes, `__not`, relative dates). Fields:
 

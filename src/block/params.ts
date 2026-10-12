@@ -8,6 +8,7 @@ export interface BlockParams {
 	showTags: boolean
 	showSource: boolean
 	group: '' | 'book' | 'category'
+	warnings: boolean
 }
 
 export const DEFAULT_PARAMS: BlockParams = {
@@ -20,6 +21,7 @@ export const DEFAULT_PARAMS: BlockParams = {
 	showTags: true,
 	showSource: true,
 	group: '',
+	warnings: true,
 }
 
 export type Check = (value: string) => { value: unknown } | { error: string }
@@ -76,6 +78,7 @@ const CHECKS: Record<string, Check> = {
 	showNotes: bool('showNotes'),
 	showTags: bool('showTags'),
 	showSource: bool('showSource'),
+	warnings: bool('warnings'),
 	limit,
 	sort: sortOf(['highlighted_at', 'updated', 'title', 'author', 'num_highlights']),
 }
