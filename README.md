@@ -44,6 +44,8 @@ One `key: value` line each. Only `search` is commonly needed.
 - **quote**: each highlight as a blockquote, its note beneath, source and date in a footer.
 - **card**: full-width cards. For highlights, the text up front with a stripe in the highlight's colour. For the `books` view, a document card in the style of Reader's library: title, author, category, highlight count and last highlight date, with a cover image if you turn on **Load cover images**.
 
+In `card` format the text of highlights, notes and Reader summaries is rendered as markdown (bold, links, lists, `[[wikilinks]]`). Images inside that text are left out unless **Load cover images** is on, and then they are kept within the card.
+
 `quote` is for highlights; on the `books` view it shows a list.
 
 ### Filter

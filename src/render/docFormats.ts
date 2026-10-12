@@ -40,7 +40,7 @@ function progress(parent: HTMLElement, d: RdDoc) {
 }
 
 function summary(parent: HTMLElement, d: RdDoc, on: boolean) {
-	if (on && d.summary) parent.createDiv({ cls: 'rw-summary', text: d.summary })
+	if (on && d.summary) parent.createDiv({ cls: 'rw-summary', text: d.summary, attr: { 'data-md': '' } })
 }
 
 function docList(el: HTMLElement, docs: RdDoc[], show: Show) {

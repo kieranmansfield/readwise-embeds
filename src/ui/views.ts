@@ -223,13 +223,29 @@ export class WebView extends ItemView {
 		const root = this.contentEl
 		root.empty()
 		root.addClass('rw-web')
-		if (Platform.isDesktopApp) {
-			const web = root.createEl('webview' as 'div', { cls: 'rw-webview', attr: { src: this.site.url, partition: 'persist:readwise-embeds' } })
-			web.setAttribute('allowpopups', 'true')
-		} else {
+		const note = root.createEl('p', { cls: 'rw-web-note' })
+		if (!Platform.isDesktopApp) {
 			// A page cannot be embedded here, so a link is all there is.
-			root.createEl('p', { text: `${this.site.name} cannot be shown inside Obsidian on this device.` })
+			note.setText(`${this.site.name} cannot be shown inside Obsidian on this device.`)
 			root.createEl('a', { cls: 'rw-web-open', href: this.site.url, text: 'Open in your browser', attr: { target: '_blank', rel: 'noopener' } })
+			return Promise.resolve()
+		}
+		try {
+			note.setText(`Loading ${this.site.name}…`)
+			const web = root.createEl('webview' as 'div', { cls: 'rw-webview' })
+			web.setAttribute('partition', 'persist:readwise-embeds')
+			web.setAttribute('allowpopups', 'true')
+			web.addEventListener('dom-ready', () => note.hide())
+			web.addEventListener('did-fail-load', (e) => {
+				const { errorCode, errorDescription } = e as Event & { errorCode?: number; errorDescription?: string }
+				if (errorCode === -3) return // a navigation replaced the load; not a failure
+				note.setText(`${this.site.name} did not load: ${errorDescription ?? 'unknown error'}.`)
+				note.show()
+			})
+			// The session is fixed by the first navigation, so src goes last.
+			web.setAttribute('src', this.site.url)
+		} catch (e) {
+			note.setText(`${this.site.name} could not be opened here: ${e instanceof Error ? e.message : String(e)}`)
 		}
 		return Promise.resolve()
 	}

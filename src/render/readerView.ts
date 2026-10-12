@@ -1,5 +1,6 @@
 import type { App } from 'obsidian'
 import { linkNotes } from './noteLinks'
+import { renderMarkdown } from './markdown'
 import type { RdDoc } from '../api/reader'
 import type { ReaderParams } from '../block/readerParams'
 import { mergeEntries, type DocStore } from '../cache/docs'
@@ -90,6 +91,7 @@ export class ReaderBlock extends EmbedBlock {
 		const rows = selectDocs(this.held.docs, this.params, this.test, this.keepHighlights)
 		if (this.cutOff()) el.createDiv({ cls: 'rw-warning', text: truncationNotice(this.held.docs.length) })
 		drawDocs(el, rows, this.params, this.deps.covers, docGroupKey(this.params.group), emptyDocsText(this.params.search))
+		renderMarkdown(el, this.deps.app, this, this.deps.covers)
 		if (this.deps.noteProperty) linkNotes(el, this.deps.app, this.deps.noteProperty)
 	}
 }

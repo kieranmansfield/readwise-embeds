@@ -1,5 +1,6 @@
 import type { App } from 'obsidian'
 import { linkNotes } from './noteLinks'
+import { renderMarkdown } from './markdown'
 import { effectiveSearch } from '../block/presets'
 import type { RwBook } from '../api/readwise'
 import type { Store } from '../cache/cache'
@@ -89,6 +90,7 @@ export class ReadwiseBlock extends EmbedBlock {
 		const empty = emptyText(view, view === 'review' ? '' : search)
 		if (view === 'books') drawBookRows(el, selectBooks(this.data.books, this.params, this.test), format, this.deps.covers, bookGroupKey(group), empty, this.params.size)
 		else drawHighlightRows(el, selectRows(this.data.rows, this.params, this.test), format, this.params, rowGroupKey(group), empty, this.params.size)
+		renderMarkdown(el, this.deps.app, this, this.deps.covers)
 		if (this.deps.noteProperty) linkNotes(el, this.deps.app, this.deps.noteProperty)
 	}
 }

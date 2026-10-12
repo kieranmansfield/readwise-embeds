@@ -5,7 +5,7 @@ import { bookMeta, dateEl, noteLine, sourceLine, tagChips, type Show } from './d
 export function highlightCards(el: HTMLElement, rows: Row[], show: Show) {
 	for (const { book, h } of rows) {
 		const card = el.createDiv({ cls: 'rw-card rw-card-highlight', attr: { 'data-color': h.color ?? '' } })
-		card.createDiv({ cls: 'rw-card-text', text: h.text })
+		card.createDiv({ cls: 'rw-card-text', text: h.text, attr: { 'data-md': '' } })
 		noteLine(card, h, show.showNotes)
 		const foot = card.createDiv('rw-card-foot')
 		sourceLine(foot, book, 'rw-source-inline', show.showSource)

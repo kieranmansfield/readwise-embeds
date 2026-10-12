@@ -27,7 +27,7 @@ export function tagChips(parent: HTMLElement, h: RwHighlight, on = true) {
 }
 
 export function noteLine(parent: HTMLElement, h: RwHighlight, on = true) {
-	if (on && h.note) parent.createDiv({ cls: 'rw-note', text: h.note })
+	if (on && h.note) parent.createDiv({ cls: 'rw-note', text: h.note, attr: { 'data-md': '' } })
 }
 
 /** "Category · 3 highlights · last 1/2/2025" */
